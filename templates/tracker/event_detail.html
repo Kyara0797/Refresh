@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4" id="event-detail">
+  <div class="card">
+
+    <!-- Header azul con acciones alineadas a la derecha -->
+    <div class="card-header bg-primary text-white header-on-primary">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h4 class="mb-0">{{ event.name }}</h4>
+
+        <!-- Grupo de acciones -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <a href="{% url 'view_theme' pk=event.theme.id %}" class="btn btn-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Back to Threat
+          </a>
+
+          {% if is_admin %}
+            <a href="{% url 'edit_event' pk=event.id %}"
+               class="btn btn-warning btn-sm" data-bs-toggle="tooltip" title="Edit">
+              <i class="fas fa-edit"></i> Edit
+            </a>
+
+            <!-- ✅ ahora azul -->
+            <a href="{% url 'add_source' event_pk=event.id %}"
+               class="btn btn-primary btn-sm" data-bs-toggle="tooltip" title="Add Source">
+              <i class="fas fa-plus"></i> Source
+            </a>
+
+            <!-- Archive / Restore con redirección inteligente -->
+            <form action="{% url 'toggle_event_active' pk=event.id %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="next"
+                     value="{% if event.is_active %}{% url 'view_theme' pk=event.theme.id %}{% else %}{% url 'view_event' event_id=event.id %}{% endif %}">
+              {% if event.is_active %}
+                <button type="submit" class="btn btn-outline-danger btn-sm" data-bs-toggle="tooltip" title="Archive">
+                  <i class="fas fa-archive"></i> Archive
+                </button>
+              {% else %}
+                <button type="submit" class="btn btn-outline-success btn-sm" data-bs-toggle="tooltip" title="Restore">
+                  <i class="fas fa-rotate-left"></i> Restore
+                </button>
+              {% endif %}
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <!-- Event details -->
+      <div class="event-details-container mb-4 p-3 bg-light rounded">
+        <h5 class="mb-3 border-bottom pb-2">Event Details</h5>
+
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-palette text-primary me-2"></i>
+                <strong class="text-muted">Threat</strong>
+              </div>
+              <p class="mb-0 fw-bold">
+                <a href="{% url 'view_theme' pk=event.theme.id %}">{{ event.theme.name }}</a>
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-calendar-day text-info me-2"></i>
+                <strong class="text-muted">Date Identified</strong>
+              </div>
+              <p class="mb-0 fw-bold">{{ event.date_identified|date:"Y-m-d" }}</p>
+            </div>
+          </div>
+
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                <strong class="text-muted">Risk Rating</strong>
+              </div>
+              <span class="badge bg-{{ event.get_risk_color }} p-2">
+                {{ event.get_risk_rating_display }}
+              </span>
+            </div>
+          </div>
+
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-tasks text-success me-2"></i>
+                <strong class="text-muted">Status</strong>
+              </div>
+              {% if event.is_active %}
+                <span class="badge bg-success p-2">Active</span>
+              {% else %}
+                <span class="badge bg-secondary p-2">Archived</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-2">
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-shield-alt text-warning me-2"></i>
+                <strong class="text-muted">Controls in Place</strong>
+              </div>
+              <p class="mb-0 fw-bold">
+                {% if event.control_in_place %}
+                  <span class="text-success">Yes</span>
+                {% else %}
+                  <span class="text-danger">No</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-building text-purple me-2"></i>
+                <strong class="text-muted">Impacted LOB</strong>
+              </div>
+              <p class="mb-0">
+                {% if impact_lobs_display %}
+                  {% for lob in impact_lobs_display %}
+                    <span class="badge bg-secondary mb-1">{{ lob }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </p>
+            </div>
+          </div>
+
+          <div class="col-md-3 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-file-alt text-info me-2"></i>
+                <strong class="text-muted">Sources</strong>
+              </div>
+              <p class="mb-0 fw-bold">{{ bundle_count }} {{ bundle_count|pluralize:"source,sources" }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Taxonomy -->
+      <div class="risk-taxonomy-container mb-4 p-3 bg-light rounded">
+        <h5 class="mb-3 border-bottom pb-2">Risk Taxonomy</h5>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-layer-group text-primary me-2"></i>
+                <strong class="text-muted">Level 1</strong>
+              </div>
+              <div class="taxonomy-items scroll-container" style="max-height:150px;overflow-y:auto;">
+                {% if risk_lv1_labels %}
+                  {% for label in risk_lv1_labels %}
+                    <span class="badge bg-primary mb-1">{{ label }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-layer-group text-info me-2"></i>
+                <strong class="text-muted">Level 2</strong>
+              </div>
+              <div class="taxonomy-items scroll-container" style="max-height:150px;overflow-y:auto;">
+                {% if risk_lv2_labels %}
+                  {% for label in risk_lv2_labels %}
+                    <span class="badge bg-info mb-1">{{ label }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <div class="detail-card p-3 h-100 bg-white rounded shadow-sm">
+              <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-layer-group text-success me-2"></i>
+                <strong class="text-muted">Level 3</strong>
+              </div>
+              <div class="taxonomy-items scroll-container" style="max-height:150px;overflow-y:auto;">
+                {% if risk_lv3_labels %}
+                  {% for label in risk_lv3_labels %}
+                    <span class="badge bg-success mb-1">{{ label }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="text-muted">None</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sources (bundles) -->
+      <div class="mt-4" id="sources">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">Sources <span class="text-muted">({{ bundle_count }})</span></h5>
+
+          <div class="d-flex align-items-center gap-2" id="sourcesFilters">
+            <select id="sourceTypeSelect" class="form-select form-select-sm">
+              {% for val,label in bundle_type_choices %}
+                <option value="{{ val }}" {% if selected_source_type == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+
+            <div class="form-check ms-2">
+              <input class="form-check-input" type="checkbox" id="showArchived" value="1" {% if show_archived %}checked{% endif %}>
+              <label class="form-check-label" for="showArchived">Show archived</label>
+            </div>
+
+            {% if selected_source_type != 'ALL' or show_archived %}
+              <a href="{% url 'view_event' event_id=event.id %}#sources" class="btn btn-sm btn-outline-secondary ms-2">
+                Clear
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if source_bundles %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle" id="sourcesTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                  <th>Potential Impact</th>
+                  <th>Items</th>
+                  <th>Status</th>
+                  {% if is_admin %}<th class="no-sort">Actions</th>{% endif %}
+                </tr>
+              </thead>
+              <tbody>
+              {% for b in source_bundles %}
+                {% with source=b.leader %}
+                <tr data-href="{% url 'source_detail' pk=source.id %}" {% if not b.any_active %}class="table-light text-muted"{% endif %}>
+                  <td>
+                    <a href="{% url 'source_detail' pk=source.id %}">{{ source.name }}</a>
+                    {% if source.potential_impact_notes %}
+                      <span class="ms-1" title="{{ source.potential_impact_notes|escape }}"><i class="fas fa-info-circle"></i></span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if b.display_type == 'MIXED' %}
+                      <span class="badge bg-dark">Mixed</span>
+                    {% elif b.display_type == 'FILE' %}
+                      <span class="badge bg-secondary">File</span>
+                    {% else %}
+                      <span class="badge bg-info">Link</span>
+                    {% endif %}
+                  </td>
+
+                  <td>{{ source.source_date|date:"Y-m-d" }}</td>
+
+                  <td>
+                    {% if source.potential_impact == 'ESCALATING' %}
+                      <span title="Escalating"><i class="fas fa-arrow-up text-danger"></i> Escalating</span>
+                    {% elif source.potential_impact == 'MAINTAINING' %}
+                      <span title="Maintaining"><i class="fas fa-arrow-right text-warning"></i> Maintaining</span>
+                    {% elif source.potential_impact == 'DECREASING' %}
+                      <span title="Decreasing"><i class="fas fa-arrow-down text-success"></i> Decreasing</span>
+                    {% else %}
+                      <em>-</em>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if b.links %}
+                      <span class="badge bg-primary me-1"><i class="fas fa-link me-1"></i>{{ b.links }}</span>
+                    {% endif %}
+                    {% if b.files %}
+                      <span class="badge bg-secondary"><i class="fas fa-paperclip me-1"></i>{{ b.files }}</span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if b.any_active %}
+                      <span class="badge bg-success">Active</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Archived</span>
+                    {% endif %}
+                  </td>
+
+                  {% if is_admin %}
+                  <td class="text-nowrap">
+                    <a href="{% url 'source_detail' pk=source.id %}" class="btn btn-sm btn-outline-primary" title="View">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'edit_source' pk=source.id %}" class="btn btn-sm btn-outline-warning" title="Edit">
+                      <i class="fas fa-edit"></i>
+                    </a>
+
+                    <form action="{% url 'toggle_source_active' pk=source.id %}" method="post" class="d-inline">
+                      {% csrf_token %}
+                      {% if b.any_active %}
+                        <button type="submit"
+                                class="btn btn-sm btn-outline-danger"
+                                title="Archive"
+                                onclick="return confirm('Archive this source bundle? You can show it again using \"Show archived\".');">
+                          <i class="fas fa-archive"></i>
+                        </button>
+                      {% else %}
+                        <button type="submit"
+                                class="btn btn-sm btn-outline-success"
+                                title="Restore"
+                                onclick="return confirm('Restore this source bundle?');">
+                          <i class="fas fa-rotate-left"></i>
+                        </button>
+                      {% endif %}
+                    </form>
+                  </td>
+                  {% endif %}
+                </tr>
+                {% endwith %}
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="alert alert-info">
+            No sources found.
+            {% if is_admin %}
+              <a href="{% url 'add_source' event_pk=event.id %}">Add the first source</a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .detail-card{transition:transform .2s ease,box-shadow .2s ease;border:1px solid rgba(0,0,0,.05)}
+  .detail-card:hover{transform:translateY(-3px);box-shadow:0 4px 8px rgba(0,0,0,.1)!important}
+  .event-details-container,.risk-taxonomy-container,.description-container{background:linear-gradient(to right,#f8f9fa,#f0f4f8)!important}
+  .taxonomy-items{min-height:40px}
+  .text-purple{color:#6f42c1}
+  .scroll-container{scroll-behavior:smooth}
+  .scroll-container::-webkit-scrollbar{width:8px}
+  .scroll-container::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px}
+  .scroll-container::-webkit-scrollbar-thumb{background:#a8a8a8;border-radius:4px}
+  .scroll-container::-webkit-scrollbar-thumb:hover{background:#888}
+  .taxonomy-items .badge{font-size:.75rem;padding:.35em .65em;margin:.15rem;display:inline-block;white-space:normal;word-break:break-word;max-width:100%}
+
+  /* DataTables: ocultar flechas en columnas no ordenables */
+  #sourcesTable th.no-sort.sorting:before,
+  #sourcesTable th.no-sort.sorting:after,
+  #sourcesTable th.no-sort.sorting_asc:before,
+  #sourcesTable th.no-sort.sorting_asc:after,
+  #sourcesTable th.no-sort.sorting_desc:before,
+  #sourcesTable th.no-sort.sorting_desc:after,
+  #sourcesTable th.no-sort.sorting_disabled:before,
+  #sourcesTable th.no-sort.sorting_disabled:after { display: none !important; }
+  #sourcesTable th.no-sort { pointer-events: none; }
+
+  /* Contraste y legibilidad sobre fondo azul */
+  .header-on-primary .btn { box-shadow: none; }
+  .header-on-primary .btn-light{
+    color:#0d6efd; background:#fff; border-color:rgba(255,255,255,.85);
+  }
+  .header-on-primary .btn-warning{
+    color:#212529; border-color:rgba(0,0,0,.1);
+  }
+  .header-on-primary .btn-outline-danger,
+  .header-on-primary .btn-outline-success{
+    border-width:1.5px; background:transparent;
+  }
+  /* ✅ Ensancha el borde del btn-primary para que destaque sobre el header azul */
+  .header-on-primary .btn-primary{
+    border-color: rgba(255,255,255,.7);
+  }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Fila clicable (sin interferir con botones/enlaces/form)
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#sourcesTable tbody tr[data-href]').forEach(function (row) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function (e) {
+        if (e.target.closest('a,button,.btn,form')) return;
+        window.location = row.getAttribute('data-href');
+      });
+    });
+  });
+
+  // Mantener #sources al cambiar filtros
+  (function(){
+    const sel = document.getElementById('sourceTypeSelect');
+    const chk = document.getElementById('showArchived');
+    function go(){
+      const u = new URL(window.location.href);
+      if (sel && sel.value && sel.value !== 'ALL') u.searchParams.set('source_type', sel.value);
+      else u.searchParams.delete('source_type');
+      if (chk && chk.checked) u.searchParams.set('show_archived','1');
+      else u.searchParams.delete('show_archived');
+      u.hash = 'sources';
+      window.location = u.toString();
+    }
+    sel && sel.addEventListener('change', go);
+    chk && chk.addEventListener('change', go);
+  })();
+
+  const SHOW_SOURCE_ACTIONS = {{ is_admin|yesno:"true,false" }};
+
+  // DataTables
+  if (window.jQuery && $.fn.DataTable) {
+    $(function () {
+      const columnDefs = [];
+      if (SHOW_SOURCE_ACTIONS) {
+        columnDefs.push({ targets: -1, orderable: false, searchable: false, className: 'no-sort' });
+      }
+      const dt = $('#sourcesTable').DataTable({
+        order: [[2,'desc']],
+        pageLength: 10,
+        lengthMenu: [[10,20,50,-1],[10,20,50,'All']],
+        columnDefs: columnDefs,
+        language: {
+          emptyTable: 'No sources available',
+          info: 'Showing _START_ to _END_ of _TOTAL_ <strong>sources</strong>',
+          infoEmpty: 'Showing 0 to 0 of 0 <strong>sources</strong>',
+          infoFiltered: '(filtered from _MAX_ total sources)',
+          lengthMenu: 'Show _MENU_ <strong>sources</strong>',
+          search: 'Search sources:',
+          paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+        }
+      });
+
+      // mover buscador a la derecha (opcional)
+      $('#sourcesTable_wrapper').find('.dataTables_filter').addClass('ms-auto');
+    });
+  }
+</script>
+{% endblock %}

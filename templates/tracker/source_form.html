@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Source</h2>
+
+  <form method="post" enctype="multipart/form-data" id="source-form" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label class="form-label">
+        Name
+        <span class="text-muted float-end"><span id="cnt">0</span>/30</span>
+      </label>
+      {{ form.name }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Source Date</label>
+      {{ form.source_date }}
+      <div class="form-text text-muted">Must be today or in the past</div>
+    </div>
+
+    <div class="mb-3">
+      <div class="btn-group" role="group">
+        <input type="checkbox" class="btn-check" id="t-link">
+        <label class="btn btn-outline-primary" for="t-link"><i class="fas fa-link me-1"></i> Link</label>
+        <input type="checkbox" class="btn-check" id="t-file">
+        <label class="btn btn-outline-primary" for="t-file"><i class="fas fa-file-upload me-1"></i> File</label>
+      </div>
+    </div>
+
+    <!-- URL -->
+    <div class="mb-3" id="urlField" style="display:none;">
+      <label class="form-label">URL</label>
+      {{ form.link_or_file }}
+      <div id="url-err" class="invalid-feedback" style="display:none;">
+        Enter a valid URL (http/https) or mailto:
+      </div>
+    </div>
+
+    <!-- MAIN FILE (un solo archivo) -->
+    <div class="mb-3" id="fileField" style="display:none;">
+      <label class="form-label">Main file (optional)</label>
+      {{ form.file_upload }} {# NO multiple aquí #}
+    </div>
+
+    <!-- ADDITIONAL FILES (varios) -->
+    <div class="mb-3">
+      <label class="form-label">Additional files</label>
+      <input id="id_extra_files" name="extra_files" type="file" class="form-control" multiple
+             accept=".pdf,.doc,.docx,.eml,.msg">
+      <ul class="list-group mt-2" id="file-list" style="display:none;"></ul>
+      <div class="form-text">Puedes subir múltiples archivos (.pdf, .doc, .docx, .eml, .msg).</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Summary</label>
+      {{ form.summary }}
+      <div id="sum-dup" class="invalid-feedback" style="display:none;">
+        Summary must be different from existing ones for this event.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label d-block">Potential Impact Trend</label>
+      {{ form.potential_impact }}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Potential Impact Notes</label>
+      {{ form.potential_impact_notes }}
+    </div>
+
+    {{ form.event }} {{ form.source_type }}  {# source_type oculto #}
+
+    <button type="submit" class="btn btn-primary" id="btn-save">Save</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // contador nombre
+  const name = document.querySelector('input[name="name"]');
+  const cnt = document.getElementById('cnt');
+  function upd(){ cnt.textContent = (name?.value||'').length; }
+  name?.addEventListener('input', upd); upd();
+
+  // date max = hoy
+  const d = document.getElementById('id_source_date');
+  if (d) {
+    const t=new Date(); const p=n=>String(n).padStart(2,'0');
+    d.max = `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
+  }
+
+  // toggles
+  const tLink = document.getElementById('t-link');
+  const tFile = document.getElementById('t-file');
+  const urlField = document.getElementById('urlField');
+  const fileField = document.getElementById('fileField');
+  const urlInput = document.getElementById('id_link_or_file');
+  function sync(){ urlField.style.display = tLink.checked?'':'none';
+                  fileField.style.display = tFile.checked?'':'none'; }
+  if (urlInput?.value) tLink.checked = true; sync();
+  tLink.addEventListener('change', sync); tFile.addEventListener('change', sync);
+
+  // Validación URL (al guardar)
+  const urlErr = document.getElementById('url-err');
+  function isValidUrl(v){
+    if(!v) return false; v=v.trim();
+    if (v.startsWith('mailto:')) return v.length>7 && v.includes('@');
+    try { const u=new URL(v); return ['http:','https:'].includes(u.protocol); } catch { return false; }
+  }
+
+  // PREVISUALIZAR nombres de extra_files (no se toca input.files)
+  const fi = document.getElementById('id_extra_files');
+  const ul = document.getElementById('file-list');
+  fi?.addEventListener('change', e=>{
+    ul.innerHTML='';
+    const files=Array.from(e.target.files||[]);
+    if(!files.length){ ul.style.display='none'; return; }
+    ul.style.display='';
+    files.forEach(f=>{
+      const li=document.createElement('li');
+      li.className='list-group-item';
+      li.textContent=f.name;
+      ul.appendChild(li);
+    });
+  });
+
+  // Summary único (al guardar)
+  let existing=[]; try { existing = JSON.parse('{{ existing_summaries_json|default:"[]"|escapejs }}'); } catch {}
+  function norm(s){ return String(s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+  const sumEl = document.getElementById('id_summary');
+  const sumErr = document.getElementById('sum-dup');
+
+  document.getElementById('btn-save').addEventListener('click', (e)=>{
+    let ok = true;
+    if (tLink.checked){
+      if (!isValidUrl(urlInput?.value)){ ok=false; urlErr.style.display='block'; urlInput?.classList.add('is-invalid'); }
+      else { urlErr.style.display='none'; urlInput?.classList.remove('is-invalid'); }
+    } else { urlErr.style.display='none'; urlInput?.classList.remove('is-invalid'); }
+
+    const s = norm(sumEl?.value);
+    if (s && existing.map(norm).includes(s)){ ok=false; sumErr.style.display='block'; sumEl?.classList.add('is-invalid'); }
+    else { sumErr.style.display='none'; sumEl?.classList.remove('is-invalid'); }
+
+    if (!ok){ e.preventDefault(); (document.querySelector('.is-invalid')||urlErr||sumErr)?.scrollIntoView({behavior:'smooth', block:'center'}); }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: emerging-risk-tracker
+    env: python
+    plan: starter
+    region: oregon
+    autoDeploy: true
+
+    buildCommand: >
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput
+
+    preDeployCommand: >
+      python manage.py migrate
+
+    startCommand: >
+      gunicorn config.wsgi:application
+
+    healthCheckPath: /
+
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MEDIA_PROVIDER
+        value: filesystem
+      - key: MEDIA_ROOT
+        value: /opt/render/project/src/media
+      #Recommended for domains
+      - key: ALLOWED_HOSTS
+        value: .onrender.com,localhost,127.0.0.1
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://*.onrender.com
+
+    disk:
+      name: media
+      mountPath: /opt/render/project/src/media
+      sizeGB: 1
