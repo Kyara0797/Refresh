@@ -1,0 +1,124 @@
+/* ============================================================
+   OFFCANVAS CORPORATE STYLE (FISERV ORANGE + CLEAN MOCKUP)
+   ============================================================ */
+
+/* Wrapper general */
+.offcanvas-custom {
+    width: 520px !important;
+    border-left: 3px solid #ff6600;
+    background: #ffffff;
+    padding: 0;
+}
+
+.offcanvas-header {
+    background: #fff3e6;
+    border-bottom: 1px solid #ffd7b3;
+}
+
+.offcanvas-title {
+    font-weight: 700;
+    color: #ff6600;
+}
+
+.btn-close {
+    filter: none !important;
+    opacity: 0.7;
+}
+
+/* Titles */
+.text-orange {
+    color: #ff6600 !important;
+}
+
+.fw-bold {
+    font-weight: 600 !important;
+}
+
+/* Accordions */
+.accordion-button {
+    font-weight: 600;
+    color: #444;
+    background: #fafafa;
+}
+
+.accordion-button.collapsed {
+    background: #ffffff;
+}
+
+.accordion-button:not(.collapsed) {
+    background: #fff3e6;
+    color: #ff6600;
+}
+
+.accordion-item {
+    border-radius: .4rem !important;
+    overflow: hidden;
+    border: 1px solid #f1f1f1;
+}
+
+.accordion-body {
+    background: #ffffff;
+}
+
+/* Orange buttons */
+.btn-orange {
+    background-color: #ff6600;
+    color: #fff;
+    border: none;
+}
+
+.btn-orange:hover {
+    background-color: #e65a00;
+    color: #fff;
+}
+
+/* File inputs */
+.file-control {
+    padding-left: 0 !important;
+    height: auto !important;
+}
+
+/* Input styles */
+.form-control,
+.form-select {
+    min-height: 42px !important;
+    border-radius: .35rem;
+}
+
+.form-text {
+    font-size: .85rem;
+    color: #777;
+}
+
+/* Additional links & files rows */
+.extra-file-row, .input-group {
+    align-items: center;
+}
+
+/* Accordion inside bundle preview (edit mode) */
+.bundle-accordion .accordion-button {
+    background: #fafafa;
+}
+
+.bundle-accordion .accordion-button:not(.collapsed) {
+    background: #fff3e6;
+    color: #ff6600;
+}
+
+.bundle-accordion .accordion-item {
+    border-radius: .4rem;
+    margin-bottom: 10px;
+}
+
+/* Alerts for staged files */
+.alert-info {
+    background: #e8f3ff;
+    border-left: 3px solid #408cff;
+}
+
+/* Save button area */
+.offcanvas-footer {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid #efefef;
+    background: #fafafa;
+}

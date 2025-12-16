@@ -1,0 +1,50 @@
+<!-- ARCHIVE SOURCE MODAL -->
+<div class="modal fade" id="archiveSourceModal{{ source.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3 text-center">
+
+      <div class="mb-3">
+        <i class="fas fa-box-archive fa-2x text-danger"></i>
+      </div>
+
+      <h5 class="fw-bold">Archive Source</h5>
+      <p class="text-muted">Are you sure you want to archive this source?</p>
+
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+
+        <form method="post" action="{% url 'archive_source' pk=source.id %}">
+          {% csrf_token %}
+          <button class="btn btn-danger">Archive</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- RESTORE SOURCE MODAL -->
+<div class="modal fade" id="restoreSourceModal{{ source.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3 text-center">
+
+      <div class="mb-3">
+        <i class="fas fa-rotate-left fa-2x text-success"></i>
+      </div>
+
+      <h5 class="fw-bold">Restore Source</h5>
+      <p class="text-muted">This source will become active again.</p>
+
+      <div class="d-flex justify-content-center gap-2 mt-3">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+
+        <form method="post" action="{% url 'restore_source' pk=source.id %}">
+          {% csrf_token %}
+          <button class="btn btn-success">Restore</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>

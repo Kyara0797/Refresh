@@ -1,0 +1,60 @@
+{% comment %}
+Pagination universal para ambos:
+- page_obj = themes_page OR events_page
+- Detecta si estamos en events para usar el query param correcto
+{% endcomment %}
+
+{% if page_obj.has_other_pages %}
+<nav class="mt-3">
+  <ul class="pagination justify-content-center">
+
+    {# Detectamos si es Events por el nombre de clase #}
+    {% if page_obj.paginator.object_list.model.__name__ == "Event" %}
+      {% set qs_param = "events_page" %}
+    {% else %}
+      {% set qs_param = "page" %}
+    {% endif %}
+
+    <!-- Prev -->
+    {% if page_obj.has_previous %}
+      <li class="page-item">
+        <a class="page-link"
+           href="?{{ qs_param }}={{ page_obj.previous_page_number }}">
+          &laquo;
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+    {% endif %}
+
+    <!-- Page numbers -->
+    {% for num in page_obj.paginator.page_range %}
+      {% if num == page_obj.number %}
+        <li class="page-item active">
+          <span class="page-link">{{ num }}</span>
+        </li>
+      {% else %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?{{ qs_param }}={{ num }}">
+            {{ num }}
+          </a>
+        </li>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Next -->
+    {% if page_obj.has_next %}
+      <li class="page-item">
+        <a class="page-link"
+           href="?{{ qs_param }}={{ page_obj.next_page_number }}">
+          &raquo;
+        </a>
+      </li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+    {% endif %}
+
+  </ul>
+</nav>
+{% endif %}

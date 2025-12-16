@@ -1,622 +1,983 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-  <h2 class="my-4">Dashboard</h2>
 
-  <!-- =========================
-       Categories
-       ========================= -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <!-- 🎨 SECTION HEADER COLOR (Categories/Threats/Events comparten este estilo) -->
-        <div class="card-header section-header">
-          <h5 class="mb-0 text-white"><i class="fas fa-tags me-2"></i>Categories</h5>
-        </div>
+<div class="container-fluid px-4 py-4">
 
-        <div class="card-body">
-          <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-4">
-            {% for category in categories %}
-            <div class="col">
-              <div class="card h-100 text-center border-0 shadow-sm hover-shadow transition-all">
-                <div class="card-body p-3 d-flex flex-column">
-                  <div class="mb-3">
-                    {% if category.name == "Political" %}
-                      <i class="fas fa-landmark fa-2x text-primary"></i>
-                    {% elif category.name == "Economic" %}
-                      <i class="fas fa-chart-line fa-2x text-success"></i>
-                    {% elif category.name == "Social" %}
-                      <i class="fas fa-users fa-2x text-info"></i>
-                    {% elif category.name == "Technological" %}
-                      <i class="fas fa-microchip fa-2x text-purple"></i>
-                    {% elif category.name == "Legal" %}
-                      <i class="fas fa-gavel fa-2x text-warning"></i>
-                    {% elif category.name == "Environmental" %}
-                      <i class="fas fa-leaf fa-2x text-success"></i>
+   <!-- ===================================== -->
+<!--             DASHBOARD HEADER          -->
+<!-- ===================================== -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold text-dark mb-0">Dashboard</h4>
+
+    <div class="dropdown" id="categoryDropdown">
+        <button class="btn btn-light border dropdown-toggle" 
+                data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-layer-group me-2 text-muted"></i> 
+            {% if selected_category %}
+                {{ selected_category.name }}
+                <span class="badge bg-orange ms-2" id="themesCount">{{ themes_page.paginator.count }}</span>
+            {% else %}
+                Categories
+            {% endif %}
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <a class="dropdown-item {% if not selected_category %}active-category{% endif %}" 
+                   href="{% url 'dashboard' %}">
+                    <i class="fas fa-layer-group me-2"></i> All Categories
+                    <span class="badge bg-secondary float-end">{{ Theme.objects.count }}</span>
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            {% for cat in categories %}
+            <li>
+                <a class="dropdown-item {% if selected_category and selected_category.id == cat.id %}active-category{% endif %}" 
+                   href="?category_id={{ cat.id }}{% if request.GET.threats_search %}&threats_search={{ request.GET.threats_search }}{% endif %}{% if request.GET.events_search %}&events_search={{ request.GET.events_search }}{% endif %}{% if show_archived_threats %}&show_archived_threats=1{% endif %}{% if show_archived_events %}&show_archived_events=1{% endif %}{% if request.GET.themes_per_page %}&themes_per_page={{ request.GET.themes_per_page }}{% endif %}{% if request.GET.events_per_page %}&events_per_page={{ request.GET.events_per_page }}{% endif %}">
+                    <i class="fas fa-tag me-2"></i> {{ cat.name }}
+                    {% with theme_count=cat.theme_set.count %}
+                    {% if theme_count > 0 %}
+                    <span class="badge bg-secondary float-end">{{ theme_count }}</span>
                     {% endif %}
-                  </div>
-                  <h6 class="card-title mb-3 fw-bold">{{ category.name }}</h6>
-                  <a href="{% url 'theme_list_by_category' category_id=category.id %}"
-                     class="btn btn-sm btn-outline-primary align-self-center mt-auto py-1 px-3">
-                    View Threats
-                  </a>
-                </div>
-              </div>
-            </div>
+                    {% endwith %}
+                </a>
+            </li>
             {% endfor %}
-          </div>
-        </div>
-
-      </div>
+        </ul>
     </div>
-  </div>
-
-  <!-- =========================
-       Threats
-       ========================= -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <!-- 🎨 SECTION HEADER COLOR (mismo que Categories/Events) -->
-        <div class="card-header section-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0 text-white"><i class="fas fa-list-alt me-2"></i>Recent Threats</h5>
-          <a href="{% url 'theme_list_all' %}" class="btn btn-sm btn-light">View All</a>
-        </div>
-
-        <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-hover table-clickable table-fixed" id="themesTable">
-              <thead>
-                <tr>
-                  <th class="col-name">Name</th>
-                  <th class="col-category">Category</th>
-                  <th class="col-date">Date</th>
-                  <th class="col-risk">Risk</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for theme in themes %}
-                <tr data-href="{% url 'theme_detail' pk=theme.id %}">
-                  <td>
-                    <a href="{% url 'theme_detail' pk=theme.id %}" class="truncate fw-semibold" title="{{ theme.name }}">
-                      {{ theme.name }}
-                    </a>
-                  </td>
-                  <td class="truncate" title="{{ theme.category }}">{{ theme.category }}</td>
-                  <td class="threat-date" data-iso="{{ theme.created_at|date:'Y-m-d' }}">
-                    {{ theme.created_at|date:"Y-m-d" }}
-                  </td>
-                  <td>
-                    <span class="badge bg-{{ theme.get_risk_color }}">{{ theme.get_risk_rating_display }}</span>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <!-- =========================
-       Events
-       ========================= -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="card">
-        <!-- 🎨 SECTION HEADER COLOR (mismo que Categories/Threats) -->
-        <div class="card-header section-header d-flex justify-content-between align-items-center">
-          <h5 class="mb-0 text-white"><i class="fas fa-calendar-alt me-2"></i>Recent Events</h5>
-          <a href="{% url 'event_list' %}" class="btn btn-sm btn-light">View All</a>
-        </div>
-
-        <div class="card-body">
-
-          <!-- Toolbar en una sola fila -->
-          <div id="eventsToolbar"
-               class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <div class="d-flex align-items-center gap-2">
-              <label for="eventShowCount" class="mb-0">Show</label>
-              <select id="eventShowCount" class="form-select form-select-sm" style="width:auto;">
-                <option value="5" selected>5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="all">All</option>
-              </select>
-              <span class="text-muted small">Events</span>
-            </div>
-
-            <div class="btn-group btn-group-sm" role="group" aria-label="Sort events">
-              <button type="button" class="btn btn-outline-secondary sort-event" data-sort="name">Name</button>
-              <button type="button" class="btn btn-outline-secondary sort-event" data-sort="date">Date</button>
-              <button type="button" class="btn btn-outline-secondary sort-event" data-sort="risk">Risk</button>
-            </div>
-
-            <div class="d-flex align-items-center gap-2">
-              <label for="eventSearch" class="mb-0">Search events:</label>
-              <input type="text" id="eventSearch" class="form-control form-control-sm"
-                     placeholder="Search events by name…" style="max-width:360px;">
-            </div>
-          </div>
-
-          <!-- Lista (Acordeón) -->
-          <!-- 👇 Agregamos init-limit para mostrar 5 en el primer render -->
-          <div class="accordion init-limit" id="eventsAccordion">
-            {% for event in events %}
-            <div class="accordion-item border-0 event-item"
-                 data-name="{{ event.name|lower }}"
-                 data-date="{{ event.date_identified|date:'Ymd' }}"
-                 data-risk="{{ event.risk_rating|lower }}">
-              <h2 class="accordion-header" id="heading{{ event.id }}">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapse{{ event.id }}" aria-expanded="false"
-                        aria-controls="collapse{{ event.id }}">
-                  <div class="event-row">
-                    <div class="event-left">
-                      <strong class="event-name">{{ event.name }}</strong>
-                    </div>
-                    <div class="event-center">
-                      <span class="event-date">{{ event.date_identified|date:"Y-m-d" }}</span>
-                    </div>
-                    <div class="event-right">
-                      <span class="badge bg-{{ event.get_risk_color }} event-risk">
-                        {{ event.get_risk_rating_display }}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              </h2>
-
-              <div id="collapse{{ event.id }}" class="accordion-collapse collapse"
-                   aria-labelledby="heading{{ event.id }}" data-bs-parent="#eventsAccordion">
-                <div class="accordion-body pt-2">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted small">Threat: {{ event.theme.name }}</span>
-                    <a href="{% url 'view_event' event_id=event.id %}" class="btn btn-sm btn-outline-primary">
-                      View Details
-                    </a>
-                  </div>
-
-                  <h6 class="mt-3 mb-2">Sources ({{ event.sources.count }})</h6>
-                  {% with sources=event.sources.all|slice:":3" %}
-                  {% if sources %}
-                    <div class="sources-container">
-                      {% for source in sources %}
-                      <div class="card mb-2 source-card" data-source-url="{% url 'source_detail' pk=source.id %}">
-                        <div class="card-body py-2">
-                          <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                              <i class="fas fa-file text-secondary me-2"></i>
-                              <div>
-                                <div class="fw-medium">{{ source.name }}</div>
-                                <small class="text-muted">{{ source.source_date|date:"Y-m-d" }}</small>
-                              </div>
-                            </div>
-                            <div>
-                              {% if source.potential_impact == 'ESCALATING' %}
-                                <span class="badge bg-danger" title="Escalating"><i class="fas fa-arrow-up"></i></span>
-                              {% elif source.potential_impact == 'MAINTAINING' %}
-                                <span class="badge bg-warning" title="Maintaining"><i class="fas fa-arrow-right"></i></span>
-                              {% elif source.potential_impact == 'DECREASING' %}
-                                <span class="badge bg-success" title="Decreasing"><i class="fas fa-arrow-down"></i></span>
-                              {% endif %}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {% endfor %}
-                      {% if event.sources.count > 3 %}
-                      <div class="text-center mt-2">
-                        <small class="text-muted">+ {{ event.sources.count|add:"-3" }} more sources</small>
-                      </div>
-                      {% endif %}
-                    </div>
-                  {% else %}
-                    <div class="text-center py-2 text-muted">
-                      <small>No sources added yet</small>
-                    </div>
-                  {% endif %}
-                  {% endwith %}
-
-                  {% if request.user.is_authenticated %}
-                    {% if request.user.is_staff or request.user.is_superuser %}
-                      <div class="mt-3 text-center">
-                        <a href="{% url 'add_source' event_pk=event.id %}" class="btn btn-sm btn-outline-primary">
-                          <i class="fas fa-plus me-1"></i> Add Source
-                        </a>
-                      </div>
-                    {% endif %}
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <!-- Paginación Events -->
-          <div class="d-flex justify-content-between align-items-center mt-3" id="eventsPagerWrap">
-            <div class="small text-muted" id="eventsCountText"></div>
-            <nav>
-              <ul class="pagination pagination-sm mb-0" id="eventsPagination"></ul>
-            </nav>
-          </div>
-
-          {% if not events %}
-          <div class="text-center p-4">
-            <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
-            <p class="text-muted">No events found</p>
-            <a href="{% url 'event_list' %}" class="btn btn-outline-secondary btn-sm">View All</a>
-          </div>
-          {% endif %}
-
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
-<style>
-  /* =========================
-     🎨 COLORES DE HEADER
-     Cambia estas variables para recolorear las 3 secciones
-     ========================= */
-  :root{
-    --dash-header-bg: #0d6efd;   /* <- COLOR DE FONDO DE Categories/Threats/Events */
-    --dash-header-fg: #ffffff;   /* <- COLOR DEL TEXTO/ICONOS */
-  }
-  .section-header{
-    background-color: var(--dash-header-bg) !important;
-    color: var(--dash-header-fg) !important;
-    border-bottom: none;
-  }
-  .section-header .btn{ color:#0d6efd; } /* botón “View All” sobre header azul */
+<!-- ===================================== -->
+<!--               THREATS LIST            -->
+<!-- ===================================== -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold text-primary mb-0">Threats List 
+                <small class="text-muted ms-2">
+                    <span id="themesTotal">{{ themes_page.paginator.count }}</span> threats
+                </small>
+            </h6>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Show per page selector -->
+                <div class="d-flex align-items-center me-2">
+                    <span class="text-muted small me-2">Show</span>
+                    <select class="form-select form-select-sm" style="width: auto;" 
+                            id="themesPerPage" onchange="changeThemesPerPage(this.value)">
+                        <option value="5" {% if request.GET.themes_per_page == '5' or not request.GET.themes_per_page %}selected{% endif %}>5</option>
+                        <option value="10" {% if request.GET.themes_per_page == '10' %}selected{% endif %}>10</option>
+                        <option value="20" {% if request.GET.themes_per_page == '20' %}selected{% endif %}>20</option>
+                        <option value="50" {% if request.GET.themes_per_page == '50' %}selected{% endif %}>50</option>
+                        <option value="all" {% if request.GET.themes_per_page == 'all' %}selected{% endif %}>All</option>
+                    </select>
+                    <span class="text-muted small ms-2">threats</span>
+                </div>
 
-  /* ===== utilidades generales ===== */
-  .accordion-button:not(.collapsed){ background-color:#f8f9fa; box-shadow: inset 0 -1px 0 rgba(0,0,0,.125); }
-  .truncate{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .table-clickable tbody tr{ cursor:pointer; }
-  .table-fixed{ table-layout:fixed; }
-  .text-purple { color:#6f42c1; }
-  table .badge{ font-weight:600; }
-  .card{ box-shadow:0 0.125rem 0.25rem rgba(0,0,0,.075); }
+                <!-- Search -->
+                <div class="input-group input-group-sm" style="width: 250px;">
+                    <span class="input-group-text bg-light">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input id="searchThemes" type="text" class="form-control" placeholder="Search threats..."
+                        value="{{ request.GET.threats_search|default:'' }}"
+                        oninput="debouncedSearch('threats')">
+                    {% if request.GET.threats_search %}
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch('threats')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                    <span id="themesSearchSpinner" class="input-group-text" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-secondary"></div>
+                    </span>
+                </div>
 
-  /* ===== Threats: columnas fijas ===== */
-  .col-name{ width:42%; }
-  .col-category{ width:22%; }
-  .col-date{ width:18%; }
-  .col-risk{ width:18%; }
+                <!-- Show Archived -->
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox"
+                           id="switchArchivedThreats"
+                           {% if show_archived_threats %}checked{% endif %}
+                           onchange="toggleArchived('threats')">
+                    <label class="form-check-label small text-muted" for="switchArchivedThreats">
+                        Show Archived
+                    </label>
+                </div>
 
-  /* ===== Threats: barras superior e inferior en UNA SOLA FILA ===== */
-  /* anulamos floats del tema de DataTables que rompen el layout */
-  #themesTable_wrapper .dataTables_length,
-  #themesTable_wrapper .dataTables_filter,
-  #themesTable_wrapper .dataTables_paginate {
-    float: none !important;
-  }
-  /* contenedores flex que forzamos vía JS */
-  #themesTable_wrapper .dt-top-flex,
-  #themesTable_wrapper .dt-bottom-flex{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:1rem;
-    flex-wrap:nowrap;
-    margin-bottom:.5rem;
-  }
-  #themesTable_wrapper .dt-top-flex .dataTables_length,
-  #themesTable_wrapper .dt-top-flex .dataTables_filter{
-    display:flex;
-    align-items:center;
-    gap:.5rem;
-    margin:0;
-    white-space:nowrap;
-  }
-  #themesTable_wrapper .dt-top-flex label{ margin:0; font-weight:500; }
-  #themesTable_wrapper .dt-top-flex .dataTables_filter input[type="search"]{ min-width:240px; }
-  #themesTable_wrapper .dt-bottom-flex .dataTables_info{
-    margin:0;
-    white-space:nowrap;
-  }
-  #themesTable_wrapper .dt-bottom-flex .dataTables_paginate{
-    margin-left:auto;   /* empuja la paginación a la derecha */
-  }
-  /* responsive */
-  @media (max-width: 768px){
-    #themesTable_wrapper .dt-top-flex,
-    #themesTable_wrapper .dt-bottom-flex{ flex-wrap:wrap; }
-    #themesTable_wrapper .dt-top-flex .dataTables_filter input[type="search"]{ min-width:180px; }
-  }
+                <!-- Add Threat -->
+                <button class="btn btn-orange btn-sm" 
+                        onclick="openAddThemeOffcanvas()">
+                    <i class="fas fa-plus me-1"></i> Add Threat
+                </button>
+                
+                <!-- View All -->
+                <button class="btn btn-light btn-sm" 
+                        onclick="loadThemeListOffcanvas()">
+                    <i class="fas fa-list me-1"></i> View All
+                </button>
+            </div>
+        </div>
+    </div>
 
-  /* ===== Events: fila del acordeón con fecha centrada ===== */
-  :root{
-    --event-date-w: 160px;   /* <- ajusta si quieres una caja de fecha más ancha/estrecha */
-  }
+    <div class="card-body p-0">
+        <div id="themesTableContainer">
+            {% include "tracker/partials/theme_table.html" %}
+        </div>
+    </div>
+</div>
 
-  .event-row{
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    column-gap: 12px;
-  }
+<!-- ===================================== -->
+<!--               EVENTS LIST             -->
+<!-- ===================================== -->
+<div class="card shadow-sm mb-5">
+    <div class="card-header bg-white border-0 pt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold text-primary mb-0">Event List
+                <small class="text-muted ms-2">
+                    <span id="eventsTotal">{{ events_page.paginator.count }}</span> events
+                </small>
+            </h6>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Show per page selector -->
+                <div class="d-flex align-items-center me-2">
+                    <span class="text-muted small me-2">Show</span>
+                    <select class="form-select form-select-sm" style="width: auto;" 
+                            id="eventsPerPage" onchange="changeEventsPerPage(this.value)">
+                        <option value="5" {% if request.GET.events_per_page == '5' or not request.GET.events_per_page %}selected{% endif %}>5</option>
+                        <option value="10" {% if request.GET.events_per_page == '10' %}selected{% endif %}>10</option>
+                        <option value="20" {% if request.GET.events_per_page == '20' %}selected{% endif %}>20</option>
+                        <option value="50" {% if request.GET.events_per_page == '50' %}selected{% endif %}>50</option>
+                        <option value="all" {% if request.GET.events_per_page == 'all' %}selected{% endif %}>All</option>
+                    </select>
+                    <span class="text-muted small ms-2">events</span>
+                </div>
 
-  /* Columna izquierda: nombre, con elipsis y con tope para no invadir la zona central */
-  .event-left{
-    min-width: 0;
-    padding-right: .75rem;
-    /* no ocupar más de la mitad libre (deja hueco para la fecha centrada) */
-    max-width: calc(50% - (var(--event-date-w) * 0.5) - 12px);
-  }
-  .event-left .event-name{
-    display: inline-block;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+                <!-- Search -->
+                <div class="input-group input-group-sm" style="width: 250px;">
+                    <span class="input-group-text bg-light">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input id="searchEvents" type="text" class="form-control" placeholder="Search events..."
+                        value="{{ request.GET.events_search|default:'' }}"
+                        oninput="debouncedSearch('events')">
+                    {% if request.GET.events_search %}
+                    <button class="btn btn-outline-secondary" type="button" onclick="clearSearch('events')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                    <span id="eventsSearchSpinner" class="input-group-text" style="display: none;">
+                        <div class="spinner-border spinner-border-sm text-secondary"></div>
+                    </span>
+                </div>
 
-  /* Columna central: fecha SIEMPRE centrada respecto a TODA la fila */
-  .event-center{
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    width: var(--event-date-w);
-    text-align: center;
-    color: #6c757d;
-    font-size: .95rem;
-    font-variant-numeric: tabular-nums; /* dígitos monoespaciados -> columnas aún más alineadas */
-  }
+                <!-- Show Archived -->
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox"
+                           id="switchArchivedEvents"
+                           {% if show_archived_events %}checked{% endif %}
+                           onchange="toggleArchived('events')">
+                    <label class="form-check-label small text-muted" for="switchArchivedEvents">
+                        Show Archived
+                    </label>
+                </div>
 
-  /* Columna derecha: badge de riesgo, alineado a la derecha, sin invadir la zona central */
-  .event-right{
-    margin-left: auto;
-    white-space: nowrap;
-    padding-left: .75rem;
-    max-width: calc(50% - (var(--event-date-w) * 0.5) - 12px);
-  }
+                <!-- Add Event -->
+                <button class="btn btn-orange btn-sm"
+                    onclick="openAddEventOffcanvas()">
+                    <i class="fas fa-plus me-1"></i> Add Event
+                </button>
 
-  /* Responsive: reducimos la caja de fecha para pantallas pequeñas */
-  @media (max-width: 768px){
-    :root{ --event-date-w: 140px; }
-  }
-  @media (max-width: 576px){
-    :root{ --event-date-w: 120px; }
-  }
+                <!-- Add Source -->
+                <button class="btn btn-outline-primary btn-sm"
+                    onclick="openAddSourceGlobalOffcanvas()">
+                    <i class="fas fa-plus me-1"></i> Add Source
+                </button>
 
-  .event-item.hidden,
-  .event-item.filtered-out{
-    display: none !important;
-  }
+                <!-- View All Events -->
+                <a class="btn btn-light btn-sm" href="{% url 'event_list' %}">
+                    <i class="fas fa-list me-1"></i> View All
+                </a>
+            </div>
+        </div>
+    </div>
 
-  /* ===== Tarjetas de fuente ===== */
-  .source-card{ cursor:pointer; transition:all .2s ease; }
-  .source-card:hover{ transform:translateY(-2px); box-shadow:0 4px 8px rgba(0,0,0,0.12); background-color:#f8f9fa; }
+    <div class="card-body p-0">
+        <div id="eventsTableContainer">
+            {% include "tracker/partials/event_list_partial.html" %}
+        </div>
+    </div>
+</div>
 
-  /* ===== Paginación Events ===== */
-  #eventsPagination .page-link{ padding:.25rem .5rem; }
+</div>
 
-  /* ===== Recent Events: limitar a 5 en el primer render (antes de que JS pagine) ===== */
-  #eventsAccordion.init-limit .event-item{ display:none; }
-  #eventsAccordion.init-limit .event-item:nth-child(-n+5){ display:block; }
-</style>
 {% endblock %}
 
 {% block scripts %}
+<style>
+/* Estilos específicos de dashboard */
+.offcanvas {
+    transition: transform 0.35s ease-in-out !important;
+}
+
+#themesTableContainer, #eventsTableContainer {
+    min-height: 200px;
+    position: relative;
+}
+
+.input-group-text .spinner-border {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-width: 0.15em;
+}
+
+#searchThemes:focus, #searchEvents:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    border-color: #86b7fe !important;
+    outline: none !important;
+    z-index: 3;
+}
+
+.form-select-sm {
+    padding: 0.25rem 2rem 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    border-radius: 0.2rem;
+    width: 70px !important;
+}
+
+.d-flex.align-items-center.me-2 {
+    white-space: nowrap;
+}
+
+/* Paginación */
+.themes-pagination .page-link[data-page],
+.events-pagination .page-link[data-page] {
+    cursor: pointer;
+    user-select: none;
+    min-width: 32px;
+    text-align: center;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #dee2e6;
+    background-color: white;
+    color: #0d6efd;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.themes-pagination .page-link[data-page]:hover,
+.events-pagination .page-link[data-page]:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    transform: translateY(-1px);
+}
+
+.themes-pagination .page-item.active .page-link,
+.events-pagination .page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    color: white;
+    cursor: default;
+}
+
+.themes-pagination .page-item.disabled .page-link,
+.events-pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    pointer-events: none;
+    background-color: #f8f9fa;
+}
+
+/* Sources */
+.sources-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border-radius: 0 0 8px 8px;
+    border: 1px solid #dee2e6;
+    border-top: none;
+}
+
+.source-item {
+    transition: all 0.2s ease;
+    border-left: 4px solid #fd7e14 !important;
+    background-color: #fffaf0;
+}
+
+.source-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.source-item:last-child {
+    border-bottom: none !important;
+}
+
+.event-chevron {
+    transition: transform 0.3s ease;
+}
+
+.event-item:hover {
+    background-color: #f8f9fa;
+}
+
+.event-item.table-active {
+    background-color: #e7f1ff !important;
+    border-left: 3px solid #0d6efd;
+}
+
+td.text-center {
+    position: relative;
+    z-index: 10;
+}
+</style>
+
 <script>
-/* =========================
-   Threats: DataTable con barras top/bottom en una sola fila
-   ========================= */
-$(function(){
-  const $table = $('#themesTable');
+// =======================================================
+// DEBOUNCE PARA BÚSQUEDAS
+// =======================================================
+const searchTimeouts = {};
 
-  const dt = $table.DataTable({
-    dom: 'lfrtip',
-    autoWidth: false,
-    columnDefs: [
-      { targets: 0, width: '42%', className: 'col-name' },
-      { targets: 1, width: '22%', className: 'col-category' },
-      { targets: 2, width: '18%', className: 'col-date' },
-      { targets: 3, width: '18%', className: 'col-risk' }
-    ],
-    order: [[2, 'desc']],
-    lengthMenu: [[5,10,20,-1],[5,10,20,'All']],
-    pageLength: 5,
-    language: {
-      emptyTable: 'No threats available',
-      info: 'Showing _START_ to _END_ of _TOTAL_ threats',
-      infoEmpty: 'Showing 0 to 0 of 0 threats',
-      infoFiltered: '(filtered from _MAX_ total threats)',
-      lengthMenu: 'Show _MENU_ threats',
-      search: 'Search threats:',
-      paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+function debouncedSearch(type) {
+    if (searchTimeouts[type]) clearTimeout(searchTimeouts[type]);
+
+    const spinner = document.getElementById(`${type}SearchSpinner`);
+    if (spinner) spinner.style.display = "flex";
+
+    searchTimeouts[type] = setTimeout(() => {
+        saveScrollPosition();
+        if (type === "threats") loadThemesTable();
+        else loadEventsTable();
+    }, 350);
+}
+
+// =======================================================
+// MANEJO COMPLETO DE PAGINACIÓN (THEMES)
+// =======================================================
+function handleThemesPagination(pageNumber) {
+    saveScrollPosition();
+
+    const spinner = document.getElementById('themesSearchSpinner');
+    if (spinner) spinner.style.display = "flex";
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (pageNumber > 1) params.set("threat_page", pageNumber);
+    else params.delete("threat_page");
+
+    const searchTerm = document.getElementById("searchThemes").value.trim();
+    const showArchived = document.getElementById("switchArchivedThreats").checked;
+    const perPage = document.getElementById("themesPerPage").value;
+
+    if (searchTerm) params.set("threats_search", searchTerm);
+    else params.delete("threats_search");
+
+    if (showArchived) params.set("show_archived_threats", "1");
+    else params.delete("show_archived_threats");
+
+    if (perPage !== "5") params.set("themes_per_page", perPage);
+    else params.delete("themes_per_page");
+
+    params.set("partial", "themes");
+
+    const container = document.getElementById("themesTableContainer");
+    const oldContent = container.innerHTML;
+
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-orange"></div>
+            <p class="text-muted mt-2">Loading page ${pageNumber}...</p>
+        </div>
+    `;
+
+    fetch(`{% url 'dashboard' %}?${params}`, 
+        { headers: { "X-Requested-With": "XMLHttpRequest" } }
+    )
+    .then(r => r.text())
+    .then(html => {
+        container.innerHTML = html;
+        window.history.pushState({}, "", `${window.location.pathname}?${params}`);
+
+        const count = html.match(/<span id="themesTotal">(\d+)<\/span>/);
+        if (count) document.getElementById("themesTotal").textContent = count[1];
+
+        setTimeout(() => restoreScrollPosition(), 80);
+
+        if (spinner) spinner.style.display = "none";
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = oldContent;
+        if (spinner) spinner.style.display = "none";
+    });
+}
+
+// =======================================================
+// PAGINACIÓN EVENTS
+// =======================================================
+function handleEventsPagination(pageNumber) {
+    saveScrollPosition();
+
+    const spinner = document.getElementById('eventsSearchSpinner');
+    if (spinner) spinner.style.display = "flex";
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (pageNumber > 1) params.set("event_page", pageNumber);
+    else params.delete("event_page");
+
+    const searchTerm = document.getElementById('searchEvents').value.trim();
+    const showArchived = document.getElementById('switchArchivedEvents').checked;
+    const perPage = document.getElementById('eventsPerPage').value;
+
+    if (searchTerm) params.set("events_search", searchTerm);
+    else params.delete("events_search");
+
+    if (showArchived) params.set("show_archived_events", "1");
+    else params.delete("show_archived_events");
+
+    if (perPage !== "5") params.set("events_per_page", perPage);
+    else params.delete("events_per_page");
+
+    params.set("partial", "events");
+
+    const container = document.getElementById("eventsTableContainer");
+    const oldContent = container.innerHTML;
+
+    container.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-orange"></div>
+            <p class="text-muted mt-2">Loading events...</p>
+        </div>
+    `;
+
+    fetch(`{% url 'dashboard' %}?${params}`, 
+        { headers: { "X-Requested-With": "XMLHttpRequest" } }
+    )
+    .then(r => r.text())
+    .then(html => {
+        container.innerHTML = html;
+
+        const count = html.match(/<span id="eventsTotal">(\d+)<\/span>/);
+        if (count) document.getElementById("eventsTotal").textContent = count[1];
+
+        window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+
+        setTimeout(() => restoreScrollPosition(), 80);
+
+        if (spinner) spinner.style.display = "none";
+    })
+    .catch(err => {
+        console.error(err);
+        container.innerHTML = oldContent;
+        if (spinner) spinner.style.display = "none";
+    });
+}
+
+// =======================================================
+// TABLAS AJAX (RELOAD COMPLETO)
+// =======================================================
+function loadThemesTable() {
+    const params = new URLSearchParams(window.location.search);
+
+    const searchTerm = document.getElementById('searchThemes').value.trim();
+    const showArchived = document.getElementById('switchArchivedThreats').checked;
+    const perPage = document.getElementById('themesPerPage').value;
+
+    if (searchTerm) params.set("threats_search", searchTerm);
+    else params.delete("threats_search");
+
+    if (showArchived) params.set("show_archived_threats", 1);
+    else params.delete("show_archived_threats");
+
+    if (perPage !== "5") params.set("themes_per_page", perPage);
+    else params.delete("themes_per_page");
+
+    params.delete("threat_page");
+    params.set("partial", "themes");
+
+    const container = document.getElementById("themesTableContainer");
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-orange"></div>
+        </div>
+    `;
+
+    fetch(`{% url 'dashboard' %}?${params}`, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(r => r.text())
+        .then(html => {
+            container.innerHTML = html;
+
+            const count = html.match(/<span id="themesTotal">(\d+)<\/span>/);
+            if (count) document.getElementById("themesTotal").textContent = count[1];
+
+            window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+        });
+}
+
+function loadEventsTable() {
+    const params = new URLSearchParams(window.location.search);
+
+    const searchTerm = document.getElementById('searchEvents').value.trim();
+    const showArchived = document.getElementById('switchArchivedEvents').checked;
+    const perPage = document.getElementById('eventsPerPage').value;
+
+    if (searchTerm) params.set("events_search", searchTerm);
+    else params.delete("events_search");
+
+    if (showArchived) params.set("show_archived_events", 1);
+    else params.delete("show_archived_events");
+
+    if (perPage !== "5") params.set("events_per_page", perPage);
+    else params.delete("events_per_page");
+
+    params.delete("event_page");
+    params.set("partial", "events");
+
+    const container = document.getElementById("eventsTableContainer");
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-orange"></div>
+        </div>
+    `;
+
+    fetch(`{% url 'dashboard' %}?${params}`, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+        .then(r => r.text())
+        .then(html => {
+            container.innerHTML = html;
+
+            const count = html.match(/<span id="eventsTotal">(\d+)<\/span>/);
+            if (count) document.getElementById("eventsTotal").textContent = count[1];
+
+            window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+        });
+}
+
+// =======================================================
+// SCROLL POSITION MANAGER
+// =======================================================
+let scrollPosition = { top: 0, inputId: null };
+
+function saveScrollPosition() {
+    scrollPosition.top = window.scrollY || document.documentElement.scrollTop;
+
+    const active = document.activeElement;
+    if (active && (active.id === "searchThemes" || active.id === "searchEvents")) {
+        scrollPosition.inputId = active.id;
     }
-  });
+}
 
-  // Reacomoda las barras top/bottom cada vez que DataTables dibuja
-  function fixThreatsBars () {
-    const $wrap = $('#themesTable_wrapper');
-
-    // TOP: length + filter
-    const $len = $wrap.find('.dataTables_length');
-    const $fil = $wrap.find('.dataTables_filter');
-    if ($len.length && $fil.length && !$len.parent().hasClass('dt-top-flex') && !$fil.parent().hasClass('dt-top-flex')) {
-      const $topFlex = $('<div class="dt-top-flex"></div>');
-      $topFlex.insertBefore($wrap.find('table').first());
-      $topFlex.append($len).append($fil);
+function restoreScrollPosition() {
+    if (scrollPosition.top > 0) {
+        window.scrollTo({ top: scrollPosition.top, behavior: "smooth" });
     }
 
-    // BOTTOM: info + paginate
-    const $info = $wrap.find('.dataTables_info');
-    const $pag  = $wrap.find('.dataTables_paginate');
-    if ($info.length && $pag.length && !$info.parent().hasClass('dt-bottom-flex') && !$pag.parent().hasClass('dt-bottom-flex')) {
-      const $bottomFlex = $('<div class="dt-bottom-flex"></div>');
-      const $after = $wrap.find('.dataTables_scroll').length ? $wrap.find('.dataTables_scroll') : $wrap.find('table').last();
-      $bottomFlex.insertAfter($after);
-      $bottomFlex.append($info).append($pag);
+    if (scrollPosition.inputId) {
+        const input = document.getElementById(scrollPosition.inputId);
+        if (input) {
+            setTimeout(() => {
+                input.focus();
+                input.setSelectionRange(input.value.length, input.value.length);
+            }, 150);
+        }
     }
-  }
+}
 
-  dt.on('init.dt draw.dt', fixThreatsBars);
-  fixThreatsBars();
+// =======================================================
+// CLEAR SEARCH
+// =======================================================
+function clearSearch(type) {
+    const input = document.getElementById(type === "threats" ? "searchThemes" : "searchEvents");
+    input.value = "";
 
-  // Navegar al hacer click en una fila (salvo en links/botones)
-  $table.on('click','tbody tr',function(e){
-    if ($(e.target).closest('a,button,.btn').length) return;
-    const href = $(this).attr('data-href');
-    if (href) window.location = href;
-  });
-});
+    const spinner = document.getElementById(`${type}SearchSpinner`);
+    if (spinner) spinner.style.display = "flex";
 
-/* =========================
-   Events: búsqueda, orden y paginación
-   ========================= */
-document.addEventListener('DOMContentLoaded', function(){
-  const eventSearch     = document.getElementById('eventSearch');
-  const eventItems      = Array.from(document.querySelectorAll('.event-item'));
-  const eventsAccordion = document.getElementById('eventsAccordion');
-  const showSelect      = document.getElementById('eventShowCount');
-  const pager           = document.getElementById('eventsPagination');
-  const countText       = document.getElementById('eventsCountText');
+    if (type === "threats") loadThemesTable();
+    else loadEventsTable();
+}
 
-  let currentSort = 'name';
-  let sortAscending = true;
-  let currentPage = 1;
+// =======================================================
+// TOGGLE ARCHIVED
+// =======================================================
+function toggleArchived(type) {
+    saveScrollPosition();
 
-  function getPageSize(){
-    const v = showSelect.value;
-    return v === 'all' ? Infinity : parseInt(v, 10);
-  }
+    const spinner = document.getElementById(`${type}SearchSpinner`);
+    if (spinner) spinner.style.display = "flex";
 
-  function visibleItems(){
-    return eventItems.filter(el => !el.classList.contains('filtered-out'));
-  }
+    if (type === "threats") loadThemesTable();
+    else loadEventsTable();
+}
 
-  function renderPagination(total, pageSize){
-    if (!total){
-      countText.textContent = 'No events';
-      pager.innerHTML = '';
-      return;
-    }
-    if (!isFinite(pageSize) || total <= pageSize){
-      countText.textContent = `Showing 1 to ${total} of ${total} events`;
-      pager.innerHTML = '';
-      return;
-    }
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    currentPage = Math.min(currentPage, totalPages);
+// =======================================================
+// CHANGE PER PAGE
+// =======================================================
+function changeThemesPerPage(value) {
+    saveScrollPosition();
+    loadThemesTable();
+}
 
-    const makePage = (label, page, disabled=false, active=false) => (
-      `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}">
-         <a class="page-link" href="#" data-page="${page}">${label}</a>
-       </li>`
-    );
+function changeEventsPerPage(value) {
+    saveScrollPosition();
+    loadEventsTable();
+}
 
-    let html = '';
-    html += makePage('Previous', currentPage-1, currentPage===1);
-    for (let p=1; p<=totalPages; p++){ html += makePage(p, p, false, p===currentPage); }
-    html += makePage('Next', currentPage+1, currentPage===totalPages);
-    pager.innerHTML = html;
+// =======================================================
+// INICIALIZACIÓN
+// =======================================================
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("Dashboard fully initialized.");
 
-    const start = (currentPage-1)*pageSize + 1;
-    const end   = Math.min(currentPage*pageSize, total);
-    countText.textContent = `Showing ${start} to ${end} of ${total} events`;
-  }
-
-  function applyShowPage(){
-    const pageSize = getPageSize();
-    const vis = visibleItems();
-    const total = vis.length;
-
-    if (!isFinite(pageSize)){
-      vis.forEach(el => el.classList.remove('hidden'));
-      renderPagination(total, pageSize);
-      return;
-    }
-    const startIdx = (currentPage-1)*pageSize;
-    const endIdx   = startIdx + pageSize;
-
-    vis.forEach((el, idx) => {
-      if (idx >= startIdx && idx < endIdx) el.classList.remove('hidden');
-      else el.classList.add('hidden');
+    // Enter en búsqueda
+    document.getElementById("searchThemes")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") { e.preventDefault(); loadThemesTable(); }
+    });
+    document.getElementById("searchEvents")?.addEventListener("keypress", e => {
+        if (e.key === "Enter") { e.preventDefault(); loadEventsTable(); }
     });
 
-    renderPagination(total, pageSize);
-  }
+    // Guardar scroll en inputs
+    document.getElementById("searchThemes")?.addEventListener("focus", saveScrollPosition);
+    document.getElementById("searchEvents")?.addEventListener("focus", saveScrollPosition);
 
-  function searchEvents(){
-    const term = (eventSearch.value || '').toLowerCase().trim();
-    eventItems.forEach(item => {
-      const text = item.textContent.toLowerCase();
-      const name = item.getAttribute('data-name') || '';
-      const match = !term || name.includes(term) || text.includes(term);
-      item.classList.toggle('filtered-out', !match);
-      item.classList.toggle('highlight', !!term && match);
+    // Paginación en delegación
+    document.addEventListener("click", function (e) {
+        const themeBtn = e.target.closest(".themes-pagination .page-link[data-page]");
+        if (themeBtn) {
+            e.preventDefault();
+            handleThemesPagination(parseInt(themeBtn.dataset.page));
+        }
+
+        const eventBtn = e.target.closest(".events-pagination .page-link[data-page]");
+        if (eventBtn) {
+            e.preventDefault();
+            handleEventsPagination(parseInt(eventBtn.dataset.page));
+        }
     });
-    currentPage = 1;
-    applyShowPage();
-  }
 
-  function sortEvents(sortBy, ascending){
-    const items = visibleItems().slice();
-    items.sort((a, b) => {
-      let av, bv;
-      if (sortBy === 'name'){ av = a.getAttribute('data-name') || ''; bv = b.getAttribute('data-name') || ''; }
-      else if (sortBy === 'date'){ av = a.getAttribute('data-date') || '00000000'; bv = b.getAttribute('data-date') || '00000000'; }
-      else if (sortBy === 'risk'){
-        const order = { critical: 0, high: 1, medium: 2, low: 3 };
-        av = order[a.getAttribute('data-risk')] ?? 9;
-        bv = order[b.getAttribute('data-risk')] ?? 9;
-      } else { av = a.getAttribute('data-name') || ''; bv = b.getAttribute('data-name') || ''; }
-      if (av < bv) return ascending ? -1 : 1;
-      if (av > bv) return ascending ? 1 : -1;
-      return 0;
+    // =======================================================
+// OPEN ADD EVENT OFFCANVAS
+// =======================================================
+function openAddEventOffcanvas() {
+    saveScrollPosition();
+    
+    fetch("{% url 'add_event_offcanvas' %}", {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const offcanvasHTML = `
+                <div class="offcanvas offcanvas-end" tabindex="-1" id="addEventOffcanvas" style="width: 800px;">
+                    <div class="offcanvas-body p-0">
+                        ${data.html}
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', offcanvasHTML);
+            const offcanvasEl = document.getElementById('addEventOffcanvas');
+            const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
+            bsOffcanvas.show();
+            
+            // Inicializar listeners después de mostrar
+            setTimeout(() => {
+                initEventOffcanvas();
+            }, 100);
+        }
+    })
+    .catch(err => console.error('Error loading event offcanvas:', err));
+}
+
+// =======================================================
+// OPEN ADD SOURCE GLOBAL OFFCANVAS
+// =======================================================
+function openAddSourceGlobalOffcanvas() {
+    saveScrollPosition();
+    
+    fetch("{% url 'add_source_global_offcanvas' %}", {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(r => {
+        if (r.ok) return r.text();
+        throw new Error('Failed to load');
+    })
+    .then(html => {
+        const offcanvasHTML = `
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="addSourceGlobalOffcanvas" style="width: 900px;">
+                ${html}
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', offcanvasHTML);
+        const offcanvasEl = document.getElementById('addSourceGlobalOffcanvas');
+        const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
+        bsOffcanvas.show();
+        
+        // Inicializar scripts del offcanvas
+        setTimeout(() => {
+            initSourceOffcanvas();
+        }, 100);
+    })
+    .catch(err => console.error('Error loading source offcanvas:', err));
+}
+
+// =======================================================
+// INITIALIZE EVENT OFFCANVAS FUNCTIONS
+// =======================================================
+function initEventOffcanvas() {
+    const form = document.querySelector('#addEventOffcanvas form');
+    if (!form) return;
+    
+    // Agregar event listener para el submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitEventForm(this);
     });
-    items.forEach(it => eventsAccordion.appendChild(it));
-    currentPage = 1;
-    applyShowPage();
-  }
+    
+    // Inicializar taxonomía dinámica
+    initTaxonomyHandlers();
+}
 
-  // UI
-  eventSearch.addEventListener('input', () => { searchEvents(); sortEvents(currentSort, sortAscending); });
-  document.querySelectorAll('.sort-event').forEach(btn => {
-    btn.addEventListener('click', function(){
-      const sortBy = this.getAttribute('data-sort');
-      if (sortBy === currentSort) sortAscending = !sortAscending;
-      else { currentSort = sortBy; sortAscending = true; }
-      document.querySelectorAll('.sort-event').forEach(b => b.classList.remove('active'));
-      this.classList.add('active');
-      sortEvents(currentSort, sortAscending);
+// =======================================================
+// SUBMIT EVENT FORM (AJAX)
+// =======================================================
+function submitEventForm(form) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        Saving...
+    `;
+    
+    const formData = new FormData(form);
+    
+    fetch(form.action || "{% url 'add_event_offcanvas' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar mensaje de éxito
+            const alertHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    ${data.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Cerrar offcanvas después de 1.5 segundos
+            setTimeout(() => {
+                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('addEventOffcanvas'));
+                offcanvas.hide();
+                
+                // Redirigir o recargar
+                if (data.redirect_url) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 300);
+                }
+            }, 1500);
+        } else {
+            // Mostrar errores
+            showFormErrors(form, data.errors);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     });
-  });
-  showSelect.addEventListener('change', () => { currentPage = 1; applyShowPage(); });
-  document.getElementById('eventsPagination').addEventListener('click', function(e){
-    const a = e.target.closest('a.page-link'); if (!a) return;
-    e.preventDefault();
-    const page = parseInt(a.dataset.page, 10);
-    if (!isNaN(page)){ currentPage = Math.max(1, page); applyShowPage(); }
-  });
+}
 
-  // Inicial: 5 por defecto + orden por nombre
-  searchEvents();
-  sortEvents(currentSort, true);
-
-  // 👇 Quita la máscara de primer render cuando ya se aplicó la paginación
-  document.getElementById('eventsAccordion').classList.remove('init-limit');
-});
-
-/* Source cards clickable */
-document.addEventListener('DOMContentLoaded', function(){
-  const cards = document.querySelectorAll('.source-card[data-source-url]');
-  cards.forEach(card=>{
-    card.addEventListener('click', (e)=>{
-      if (e.target.closest('a, button, .badge, i')) return;
-      const url = card.getAttribute('data-source-url');
-      if (url) window.location.href = url;
+// =======================================================
+// INITIALIZE SOURCE OFFCANVAS
+// =======================================================
+function initSourceOffcanvas() {
+    const form = document.querySelector('#addSourceGlobalOffcanvas form');
+    if (!form) return;
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        submitSourceForm(this);
     });
-  });
+    
+    // Inicializar contador de nombre
+    const nameInput = form.querySelector('input[name="name"]');
+    const nameCounter = document.getElementById('nmCnt');
+    if (nameInput && nameCounter) {
+        nameCounter.textContent = nameInput.value.length;
+        nameInput.addEventListener('input', () => {
+            nameCounter.textContent = nameInput.value.length;
+        });
+    }
+}
+
+// =======================================================
+// SUBMIT SOURCE FORM (AJAX)
+// =======================================================
+function submitSourceForm(form) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+        <i class="fas fa-spinner fa-spin me-2"></i>
+        Saving...
+    `;
+    
+    const formData = new FormData(form);
+    
+    fetch(form.action || "{% url 'add_source_global_offcanvas' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar mensaje de éxito
+            const alertHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Source created successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Cerrar offcanvas después de 1.5 segundos
+            setTimeout(() => {
+                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('addSourceGlobalOffcanvas'));
+                offcanvas.hide();
+                
+                // Redirigir o recargar
+                if (data.redirect_url) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 300);
+                } else {
+                    // Recargar la tabla de events si estamos en dashboard
+                    loadEventsTable();
+                }
+            }, 1500);
+        } else {
+            // Mostrar errores
+            showFormErrors(form, data.errors);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    })
+    .catch(err => {
+        console.error('Error:', err);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+    });
+}
+
+// =======================================================
+// HELPER: SHOW FORM ERRORS
+// =======================================================
+function showFormErrors(form, errors) {
+    // Limpiar errores anteriores
+    form.querySelectorAll('.is-invalid').forEach(el => {
+        el.classList.remove('is-invalid');
+    });
+    form.querySelectorAll('.invalid-feedback').forEach(el => {
+        el.remove();
+    });
+    
+    // Mostrar nuevos errores
+    for (const [field, messages] of Object.entries(errors)) {
+        const input = form.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.classList.add('is-invalid');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.textContent = messages.join(', ');
+            input.parentNode.appendChild(errorDiv);
+        } else {
+            // Error general
+            const alertHTML = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${messages.join(', ')}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            form.insertAdjacentHTML('afterbegin', alertHTML);
+        }
+    }
+}
+
+// =======================================================
+// INITIALIZE TAXONOMY HANDLERS FOR EVENT FORM
+// =======================================================
+function initTaxonomyHandlers() {
+    // Taxonomía dinámica - si existe en el form
+    const lv1Checkboxes = document.querySelectorAll('input[name="risk_taxonomy_lv1"]');
+    if (lv1Checkboxes.length > 0) {
+        lv1Checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                updateTaxonomyOptions();
+            });
+        });
+        
+        // Inicializar
+        updateTaxonomyOptions();
+    }
+}
+
+function updateTaxonomyOptions() {
+    const selectedLv1 = Array.from(
+        document.querySelectorAll('input[name="risk_taxonomy_lv1"]:checked')
+    ).map(cb => cb.value);
+    
+    const selectedLv2 = Array.from(
+        document.querySelectorAll('input[name="risk_taxonomy_lv2"]:checked')
+    ).map(cb => cb.value);
+    
+    const form = document.querySelector('#addEventOffcanvas form');
+    if (!form) return;
+    
+    const formData = new FormData();
+    selectedLv1.forEach(v => formData.append('risk_taxonomy_lv1', v));
+    selectedLv2.forEach(v => formData.append('risk_taxonomy_lv2', v));
+    formData.append('__partial__', '1');
+    
+    fetch(form.action || "{% url 'add_event_offcanvas' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Actualizar las opciones de Level 2 y Level 3
+            const container = document.querySelector('#addEventOffcanvas');
+            const lv2Div = container.querySelector('#lv2-options');
+            const lv3Div = container.querySelector('#lv3-options');
+            
+            if (lv2Div) lv2Div.innerHTML = data.html;
+            if (lv3Div) lv3Div.innerHTML = data.html;
+        }
+    })
+    .catch(err => console.error('Error updating taxonomy:', err));
+}
+
+    // Manejo de back / forward
+    window.addEventListener("popstate", function () {
+        loadThemesTable();
+        loadEventsTable();
+    });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,257 @@
+<!-- ========================================================= -->
+<!--           ADD / EDIT SOURCE — OFFCANVAS FISERV            -->
+<!-- ========================================================= -->
+
+<div class="offcanvas offcanvas-end shadow-lg border-start"
+     tabindex="-1"
+     id="sourceOffcanvas"
+     style="width: 480px; background: white;">
+
+    <!-- HEADER -->
+    <div class="offcanvas-header border-bottom bg-light">
+        <h5 class="offcanvas-title fw-bold">
+            {% if creating %}
+                <i class="fas fa-plus-circle me-2 text-orange"></i> Add Source
+            {% else %}
+                <i class="fas fa-edit me-2 text-orange"></i> Edit Source
+            {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <!-- BODY -->
+    <div class="offcanvas-body">
+
+        <form id="sourceForm" method="post" enctype="multipart/form-data"
+              action="{% if creating %}
+                          {% url 'add_source' event_pk=event.pk %}
+                      {% else %}
+                          {% url 'edit_source' pk=source.pk %}
+                      {% endif %}">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <!-- ========================================================= -->
+            <!--                       ACCORDION                           -->
+            <!-- ========================================================= -->
+            <div class="accordion" id="sourceAccordion">
+
+                <!-- BASIC INFORMATION ---------------------------------- -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="basicInfoHeader">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#basicInfoSection">
+                            <i class="fas fa-info-circle me-2 text-orange"></i> Basic Information
+                        </button>
+                    </h2>
+
+                    <div id="basicInfoSection" class="accordion-collapse collapse show"
+                         data-bs-parent="#sourceAccordion">
+                        <div class="accordion-body">
+
+                            <!-- Title -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Title</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.title.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Type -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Source Type</label>
+                                {{ form.source_type }}
+                            </div>
+
+                            <!-- Date -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Date</label>
+                                {{ form.date }}
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LINKS & FILES -------------------------------------- -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="linkFileHeader">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#linkFileSection">
+                            <i class="fas fa-paperclip me-2 text-orange"></i> Links & Files
+                        </button>
+                    </h2>
+
+                    <div id="linkFileSection" class="accordion-collapse collapse"
+                         data-bs-parent="#sourceAccordion">
+                        <div class="accordion-body">
+
+                            <!-- Links -->
+                            <label class="form-label fw-semibold">External Links</label>
+                            <div id="extraLinksWrapper">
+                                {% for link in extra_links %}
+                                    <div class="input-group mb-2">
+                                        <input type="url" name="extra_links"
+                                               class="form-control" value="{{ link }}">
+                                        <button class="btn btn-outline-danger remove-link" type="button">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <button class="btn btn-outline-secondary btn-sm mb-3" type="button" id="addLink">
+                                <i class="fas fa-plus me-1"></i>Add Link
+                            </button>
+
+                            <!-- FILES -->
+                            <label class="form-label fw-semibold">Upload Files</label>
+                            <input type="file" name="extra_files" multiple class="form-control">
+
+                            {% if existing_files %}
+                                <div class="mt-3">
+                                    <label class="small text-muted">Existing Files:</label>
+                                    <ul class="small mb-0">
+                                        {% for f in existing_files %}
+                                            <li><a href="{{ f.url }}" target="_blank">{{ f.name }}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            {% endif %}
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CONTENT -------------------------------------------- -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="contentHeader">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#contentSection">
+                            <i class="fas fa-align-left me-2 text-orange"></i> Content
+                        </button>
+                    </h2>
+
+                    <div id="contentSection" class="accordion-collapse collapse"
+                         data-bs-parent="#sourceAccordion">
+                        <div class="accordion-body">
+                            {{ form.content }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI SUMMARY ------------------------------------------- -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="aiSummaryHeader">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#aiSummarySection">
+                            <i class="fas fa-robot me-2 text-orange"></i> AI Summary
+                        </button>
+                    </h2>
+
+                    <div id="aiSummarySection" class="accordion-collapse collapse"
+                         data-bs-parent="#sourceAccordion">
+                        <div class="accordion-body">
+
+                            <textarea id="aiSummaryBox" name="ai_summary"
+                                      class="form-control" rows="4">
+                                {{ form.ai_summary.value }}
+                            </textarea>
+
+                            <button type="button" id="btnGenerateSummary"
+                                    class="btn btn-orange btn-sm mt-3">
+                                <i class="fas fa-magic me-1"></i>Generate Summary
+                            </button>
+
+                            <div id="aiSummaryLoader"
+                                 class="mt-3 text-center d-none">
+                                <div class="spinner-border text-orange"></div>
+                                <p class="small mt-2 text-muted">
+                                    Generating AI summary… Please wait
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SUBMIT ------------------------------------------------- -->
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="submit" class="btn btn-orange px-4">
+                    <i class="fas fa-save me-2"></i>
+                    {% if creating %} Save Source {% else %} Update Source {% endif %}
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+
+<!-- ========================================================= -->
+<!--                      INLINE JS ACTIONS                    -->
+<!-- ========================================================= -->
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // ---------------------------------------------------------
+    // Add/Remove Links
+    // ---------------------------------------------------------
+    const wrapper = document.getElementById("extraLinksWrapper");
+    const btnAdd = document.getElementById("addLink");
+
+    btnAdd?.addEventListener("click", () => {
+        const div = document.createElement("div");
+        div.className = "input-group mb-2";
+        div.innerHTML = `
+            <input type="url" name="extra_links" class="form-control" placeholder="https://...">
+            <button class="btn btn-outline-danger remove-link" type="button">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        wrapper.appendChild(div);
+    });
+
+    wrapper?.addEventListener("click", function(e) {
+        if (e.target.closest(".remove-link")) {
+            e.target.closest(".input-group").remove();
+        }
+    });
+
+
+    // ---------------------------------------------------------
+    // AI Summary with loader
+    // ---------------------------------------------------------
+    const aiBtn = document.getElementById("btnGenerateSummary");
+    const aiBox = document.getElementById("aiSummaryBox");
+    const aiLoader = document.getElementById("aiSummaryLoader");
+
+    aiBtn?.addEventListener("click", () => {
+        aiLoader.classList.remove("d-none");
+        aiBox.value = "";
+
+        setTimeout(() => {
+            aiLoader.classList.add("d-none");
+            aiBox.value = "This is a placeholder summary… (connect to backend AI)";
+        }, 1500);
+    });
+
+});
+</script>
+
+<style>
+.text-orange { color:#f26522; }
+.btn-orange {
+    background:#f26522;
+    color:white;
+}
+.btn-orange:hover { background:#d3541c; color:white; }
+</style>

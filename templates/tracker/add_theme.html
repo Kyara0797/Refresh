@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% comment %} {% extends "base.html" %}
 {% load widget_tweaks %}
 
 {% block content %}
@@ -87,11 +87,11 @@
                         </div>
                       </div>
                       <div class="col-3">
-                        <div class="risk-card compact" data-value="MEDIUM" title="Medium Risk">
+                        <div class="risk-card compact" data-value="MODERATE" title="Medium Risk">
                           <div class="card h-100">
                             <div class="card-body text-center p-1">
                               <div class="risk-icon risk-medium"><i class="fas fa-exclamation-circle"></i></div>
-                              <div class="risk-label">Medium</div>
+                              <div class="risk-label">Moderate</div>
                             </div>
                           </div>
                         </div>
@@ -258,4 +258,4 @@ document.addEventListener('DOMContentLoaded', function () {
   .d-none { display:none; }
   .is-invalid { border:1px solid #dc3545 !important; }
 </style>
-{% endblock %}
+{% endblock %} {% endcomment %}

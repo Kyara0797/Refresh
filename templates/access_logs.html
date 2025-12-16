@@ -1,30 +1,106 @@
-{% extends "base.html" %}
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Fiserv | Threat Landscape</title>
 
-{% block content %}
-<div class="container mt-4">
-    <h2><i class="fas fa-history me-2"></i>Access Log</h2>
-    
-    <div class="table-responsive mt-4">
-        <table class="table table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>User</th>
-                    <th>Date/Time</th>
-                    <th>Direction IP</th>
-                    <th>Device</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for log in logs %}
-                <tr>
-                    <td>{{ log.user.username }}</td>
-                    <td>{{ log.login_time|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ log.ip_address }}</td>
-                    <td>{{ log.user_agent|truncatechars:50 }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+
+  <style>
+    :root{
+      --fiserv-orange:#fd7e14;
+      --bar-bg:#0f1720;
+      --card-hdr:#1565ff;
+    }
+    body{ background:#f6f7fb; }
+    .topbar{
+      background:var(--bar-bg);
+      color:#fff;
+      border-bottom:4px solid var(--fiserv-orange);
+    }
+    .fiserv-badge{ color:var(--fiserv-orange); font-weight:800; }
+    .app-brand{ font-weight:600; letter-spacing:.3px; }
+
+    .section{
+      background:#fff; border-radius:.75rem; box-shadow:0 6px 18px rgba(16,24,40,.08);
+      border:1px solid #eaecf0;
+    }
+    .section-header{
+      background:var(--card-hdr);
+      color:#fff; border-top-left-radius:.75rem; border-top-right-radius:.75rem;
+      padding:.85rem 1rem; display:flex; align-items:center; gap:.75rem;
+    }
+    .section-header h2{ font-size:1rem; font-weight:600; margin:0; }
+
+    .toolbar{ gap:12px; display:flex; align-items:center; }
+    .toolbar .vr-light{ width:1px; height:26px; background:rgba(255,255,255,.35); }
+    .search-wrap{ position:relative; min-width:320px; }
+    .search-wrap .fa-magnifying-glass{ position:absolute; left:10px; top:10px; opacity:.85; }
+    .search-wrap input{ padding-left:34px; }
+
+    .table thead th{ font-weight:700; color:#344054; font-size:.92rem; vertical-align:middle; }
+    .btn-kebab{ color:#475467; }
+    .dropdown-menu .dropdown-item i{ width:18px; }
+  </style>
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <!-- Top Nav -->
+  <nav class="topbar py-2">
+    <div class="container-xxl d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <span class="fiserv-badge">fiserv.</span>
+        <span class="app-brand">Threat Landscape</span>
+      </div>
+
+      <div class="d-flex align-items-center gap-3">
+        <!-- Categories dropdown: visible para TODOS -->
+        {% if nav_categories %}
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-sm d-inline-flex align-items-center"
+                  data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa-solid fa-grid-2 me-2"></i> Categories
+            <i class="fa-solid fa-caret-down ms-2"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+            {% for c in nav_categories %}
+              <li>
+                <a class="dropdown-item" href="{% url 'theme_list_by_category' category_id=c.id %}">
+                  {{ c.name }}
+                </a>
+              </li>
+            {% empty %}
+              <li><span class="dropdown-item-text text-muted">No categories</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <!-- Login / Logout (el nav SIEMPRE es visible) -->
+        {% if request.user.is_authenticated %}
+          <span class="text-white-50 small d-none d-md-inline"><i class="fa-regular fa-user me-2"></i>{{ request.user.username }}</span>
+          <a class="btn btn-outline-light btn-sm" href="{% url 'logout' %}">
+            <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
+          </a>
+        {% else %}
+          <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">
+            <i class="fa-solid fa-right-to-bracket me-1"></i> Login
+          </a>
+        {% endif %}
+      </div>
     </div>
-</div>
-{% endblock %}
+  </nav>
+
+  <main class="container-xxl py-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

@@ -6,10 +6,11 @@ from django.utils.safestring import mark_safe
 from datetime import date, datetime, time
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-from urllib.parse import urlparse
+
 from django.contrib.auth import get_user_model, authenticate
 from .models import Source
 from urllib.parse import urlparse
+import re
 
 ALLOWED_FILE_EXTS = {'.pdf', '.doc', '.docx'}
 
@@ -23,12 +24,12 @@ from .models import (
     RISK_TAXONOMY_LV1,
     RISK_TAXONOMY_LV2,
     RISK_TAXONOMY_LV3,
-    STATUS_CHOICES,
+    PHASE_STATUS_CHOICES,
     POTENTIAL_IMPACT_CHOICES
 )
 from config import settings
 import os.path
-from tracker.models import RISK_CHOICES
+from tracker.models import RISK_CHOICES, ONSET_TIMELINE_CHOICES
 from django.forms.widgets import ClearableFileInput
 
 ALLOWED_EXTS = {
@@ -39,12 +40,12 @@ ALLOWED_EXTS = {
 
 
 
-RISK_RATING_CHOICES = [
-    ('LOW', 'Low'),
-    ('MEDIUM', 'Medium'),
-    ('HIGH', 'High'),
-    ('CRITICAL', 'Critical'),
-]
+# RISK_RATING_CHOICES = [
+#     ('low', 'Low'),
+#     ('moderate', 'Moderate'),
+#     ('high', 'High'),
+#     ('critical', 'Critical'),
+# ]
 
 class CategoryForm(forms.ModelForm):
     class Meta:
@@ -55,35 +56,106 @@ class CategoryForm(forms.ModelForm):
         }
 
 class ThemeForm(forms.ModelForm):
-    
+    """
+    Formulario totalmente compatible con el nuevo offcanvas, AJAX,
+    risk cards y validaciones estrictas.
+    """
+
     category = forms.ModelChoiceField(
         queryset=Category.objects.all().order_by('name'),
         widget=forms.Select(attrs={
-            'class': 'form-control',
-            'id': 'id_category'
-        })
+            'class': 'form-select',
+            'id': 'id_category',
+            'required': True,
+        }),
+        error_messages={'required': 'Please select a category.'}
     )
-    
+
+    # ESTE CAMPO ES CRÍTICO: lo llena JS con minúsculas
     risk_rating = forms.ChoiceField(
-        choices=[('', '---------')] + list(RISK_CHOICES),
-        widget=forms.Select(attrs={'class': 'form-select risk-rating-select'}),
-        required=True
+        choices=RISK_CHOICES,               # [('low','Low'),...]
+        widget=forms.HiddenInput(),         # oculto para UI
+        required=True,
+        error_messages={
+            'required': 'Please select a risk rating.',
+            'invalid_choice': 'Invalid risk rating selected.'
+        }
     )
+
+    name = forms.CharField(
+        max_length=30,
+        min_length=3,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'id': 'id_name',
+            'maxlength': '30',
+            'minlength': '3',
+            'placeholder': 'Enter threat name (3-30 characters)',
+            'required': True,
+        }),
+        error_messages={
+            'required': 'Please enter a name for the threat.',
+            'min_length': 'Name must be at least 3 characters.',
+            'max_length': 'Name cannot exceed 30 characters.',
+        }
+    )
+
+    onset_timeline = forms.ChoiceField(
+        choices=ONSET_TIMELINE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_onset_timeline',
+            'required': True,
+        }),
+        required=True,
+        error_messages={'required': 'Please select an onset timeline.'}
+    )
+
     class Meta:
         model = Theme
         fields = ['category', 'name', 'risk_rating', 'onset_timeline']
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'risk_rating': forms.Select(attrs={'class': 'form-control'}),
-            'onset_timeline': forms.Select(attrs={'class': 'form-control'}),
-        }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            field.widget.attrs['class'] = 'form-control'
+    # ------------------------------------------------------------------
+    #                 VALIDACIONES PERSONALIZADAS
+    # ------------------------------------------------------------------
 
-    
+    def clean_name(self):
+        """
+        Limpia y valida el nombre:
+        - Debe respetar min/max del modelo
+        - No permitir solo espacios
+        """
+        name = (self.cleaned_data.get('name') or '').strip()
+        if len(name) < 3:
+            raise ValidationError("Name must be at least 3 characters.")
+        if len(name) > 30:
+            raise ValidationError("Name cannot exceed 30 characters.")
+        return name
+
+    def clean_risk_rating(self):
+        """
+        Garantiza que risk_rating llega en minúsculas y es una opción válida.
+        """
+        rating = (self.cleaned_data.get('risk_rating') or '').strip().lower()
+
+        valid_options = [c[0] for c in RISK_CHOICES]  # ['low','moderate','high','critical']
+
+        if rating not in valid_options:
+            raise ValidationError("Invalid risk rating selected.")
+
+        return rating
+
+    def clean(self):
+        """
+        Validación general por si se necesita expandir.
+        """
+        cleaned = super().clean()
+
+        if not cleaned.get("risk_rating"):
+            self.add_error("risk_rating", "Please select a risk rating.")
+
+        return cleaned
+
     
 class EventForm(forms.ModelForm):
     name = forms.CharField(
@@ -132,7 +204,7 @@ class EventForm(forms.ModelForm):
     )
     
     status = forms.ChoiceField(
-    choices=[('', '---------')] + list(Event.STATUS_CHOICES),
+    choices=[('', '---------')] + list(Event.PHASE_STATUS_CHOICES),
     widget=forms.Select(attrs={'class': 'form-control status-select'}),
     required=True
     )
@@ -328,11 +400,11 @@ _URL_VALIDATOR = URLValidator(schemes=["http", "https"])
 def _norm(s: str) -> str:
     return " ".join((s or "").strip().lower().split())
 
-def clean_name(self):
-    v = (self.cleaned_data.get('name') or '').strip()
-    if len(v) < 3:
-        raise forms.ValidationError('The name is required (3–30 characters, not just spaces).')
-    return v
+# def clean_name(self):
+#     v = (self.cleaned_data.get('name') or '').strip()
+#     if len(v) < 3:
+#         raise forms.ValidationError('The name is required (3–30 characters, not just spaces).')
+#     return v
 
 class MultiFileInput(forms.ClearableFileInput):
     """File input con multiple=True (para extra_files, no para file_upload del modelo)."""

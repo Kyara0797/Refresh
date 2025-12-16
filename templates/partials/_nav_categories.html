@@ -1,0 +1,24 @@
+{# templates/partials/_nav_categories.html #}
+<div class="dropdown">
+  <button class="btn btn-link text-white d-flex align-items-center gap-2 dropdown-toggle"
+          type="button" id="navCategoriesBtn" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="fas fa-th-large"></i>
+    <span>Categories</span>
+  </button>
+
+  <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="navCategoriesBtn" style="min-width: 240px;">
+    {% if categories %}
+      {% for c in categories %}
+        <li>
+          <a class="dropdown-item d-flex align-items-center justify-content-between"
+             href="{% url 'theme_list_by_category' c.id %}">
+            <span>{{ c.name }}</span>
+            <i class="fas fa-chevron-right small text-muted"></i>
+          </a>
+        </li>
+      {% endfor %}
+    {% else %}
+      <li><span class="dropdown-item-text text-muted">No categories</span></li>
+    {% endif %}
+  </ul>
+</div>

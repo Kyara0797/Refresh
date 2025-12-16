@@ -1,0 +1,99 @@
+/* ================================
+   🎨 GENERAL DASHBOARD STYLING
+=================================== */
+
+:root {
+  --fiserv-orange: #f26522;
+  --fiserv-dark: #2c3e50;
+  --fiserv-gray: #6c757d;
+  --fiserv-light: #f8f9fa;
+  --source-border: #e5e7eb;
+}
+
+/* Accordion global */
+.accordion-item {
+  border-radius: .5rem !important;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+.accordion-button {
+  background: #fff !important;
+  padding-top: .75rem;
+  padding-bottom: .75rem;
+}
+
+.accordion-button:focus {
+  box-shadow: none !important;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: #f8f9fa !important;
+  border-bottom: 1px solid #e1e1e1 !important;
+}
+
+.accordion-body {
+  background: #fff;
+  padding: 1.2rem 1rem 1.5rem 1rem;
+}
+
+/* ================================
+   🎯 EVENT ROW
+=================================== */
+.event-item strong {
+  font-size: 1rem;
+  color: var(--fiserv-dark);
+}
+
+.accordion-button .badge {
+  font-size: .75rem;
+  padding: .4rem .5rem;
+}
+
+.accordion-button .text-muted {
+  font-size: .9rem;
+}
+
+/* ================================
+   🎯 SOURCE TABLE (Mimics mockup)
+=================================== */
+
+table.sources-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 6px;
+}
+
+table.sources-table thead th {
+  background: var(--fiserv-light);
+  color: #333;
+  font-weight: 600;
+  padding: .55rem .75rem;
+  border-bottom: 1px solid #ddd;
+}
+
+table.sources-table tbody tr {
+  background: #fff;
+  border-radius: .45rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  border-left: 4px solid var(--fiserv-orange);
+}
+
+table.sources-table tbody tr td {
+  padding: .65rem .8rem;
+  vertical-align: middle;
+}
+
+table.sources-table tbody tr td:first-child {
+  font-weight: 600;
+  color: var(--fiserv-dark);
+}
+
+table.sources-table tbody tr td a {
+  color: var(--fiserv-dark);
+  text-decoration: none;
+}
+table.sources-table tbody tr td a:hover {
+  color:
+}

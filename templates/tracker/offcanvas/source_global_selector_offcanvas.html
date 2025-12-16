@@ -1,0 +1,156 @@
+<div class="offcanvas offcanvas-end offcanvas-custom" id="mainOffcanvas">
+
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title fw-bold">Add Source</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+
+        <!-- ================================ -->
+        <!-- STEP 1: CATEGORY → THEME → EVENT -->
+        <!-- ================================ -->
+        <div id="global-source-step-1">
+
+            <label class="form-label fw-semibold">Select Category</label>
+            <select id="selCategory" class="form-select mb-3">
+                <option value="">-- Select Category --</option>
+                {% for c in categories %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+
+            <label class="form-label fw-semibold">Select Theme</label>
+            <select id="selTheme" class="form-select mb-3" disabled>
+                <option value="">-- Select Theme --</option>
+            </select>
+
+            <label class="form-label fw-semibold">Select Event</label>
+            <select id="selEvent" class="form-select mb-4" disabled>
+                <option value="">-- Select Event --</option>
+            </select>
+
+            <button id="btnLoadSourceForm"
+                    class="btn btn-orange w-100"
+                    disabled>
+                Continue
+            </button>
+
+        </div>
+
+        <!-- ======================================= -->
+        <!-- STEP 2: REAL SOURCE FORM (AJAX LOADED) -->
+        <!-- ======================================= -->
+        <div id="global-source-step-2" class="d-none"></div>
+
+    </div>
+</div>
+
+
+<!-- ========================================================== -->
+<!--      SCRIPT — MUST RUN AFTER BEING INJECTED VIA AJAX       -->
+<!-- ========================================================== -->
+<script>
+(function () {
+
+    const selCategory = document.getElementById("selCategory");
+    const selTheme = document.getElementById("selTheme");
+    const selEvent = document.getElementById("selEvent");
+    const btnContinue = document.getElementById("btnLoadSourceForm");
+    const step1 = document.getElementById("global-source-step-1");
+    const step2 = document.getElementById("global-source-step-2");
+
+    if (!selCategory || !selTheme || !selEvent) {
+        console.warn(" Offcanvas Add Source Global not fully mounted yet.");
+        return;
+    }
+
+    /* ============================================================
+       LOAD THEMES BY CATEGORY
+       ============================================================ */
+    selCategory.addEventListener("change", function () {
+
+        const catId = this.value;
+
+        selTheme.innerHTML = '<option value="">-- Select Theme --</option>';
+        selTheme.disabled = true;
+
+        selEvent.innerHTML = '<option value="">-- Select Event --</option>';
+        selEvent.disabled = true;
+
+        btnContinue.disabled = true;
+
+        if (!catId) return;
+
+        fetch(`/ajax/themes/?category_id=${catId}`)
+            .then(r => r.text())
+            .then(html => {
+                selTheme.innerHTML = html;
+                selTheme.disabled = false;
+            })
+            .catch(err => console.error(" Error loading themes:", err));
+    });
+
+
+    /* ============================================================
+       LOAD EVENTS BY THEME
+       ============================================================ */
+    selTheme.addEventListener("change", function () {
+
+        const themeId = this.value;
+
+        selEvent.innerHTML = '<option value="">-- Select Event --</option>';
+        selEvent.disabled = true;
+        btnContinue.disabled = true;
+
+        if (!themeId) return;
+
+        fetch(`/ajax/events/?theme_id=${themeId}`)
+            .then(r => r.text())
+            .then(html => {
+                selEvent.innerHTML = html;
+                selEvent.disabled = false;
+            })
+            .catch(err => console.error("❌ Error loading events:", err));
+    });
+
+
+    /* ============================================================
+       ENABLE CONTINUE BUTTON
+       ============================================================ */
+    selEvent.addEventListener("change", function () {
+        btnContinue.disabled = !this.value;
+    });
+
+
+    /* ============================================================
+       STEP 2 → LOAD THE REAL SOURCE FORM (AI SUMMARY)
+       ============================================================ */
+    btnContinue.addEventListener("click", function () {
+
+        const eventId = selEvent.value;
+        if (!eventId) return;
+
+        fetch(`/sources/${eventId}/add-offcanvas/`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+            .then(r => r.json())
+            .then(data => {
+
+                // Hide STEP 1
+                step1.classList.add("d-none");
+
+                // Show STEP 2
+                step2.classList.remove("d-none");
+                step2.innerHTML = data.html;
+
+                // Re-run scripts INSIDE Step 2
+                if (typeof reexecuteScripts === "function") {
+                    reexecuteScripts(step2);
+                }
+            })
+            .catch(err => console.error("❌ Error loading source form:", err));
+    });
+
+})();
+</script>

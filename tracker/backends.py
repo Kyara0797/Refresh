@@ -9,7 +9,7 @@ class EmailOrUsernameModelBackend(ModelBackend):
             return None
 
         # Normaliza la entrada
-        username = (username or "").strip()
+        username = (username or "").trim()
 
         User = get_user_model()
         # Intentamos por email (case-insensitive)

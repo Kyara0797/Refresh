@@ -1,0 +1,421 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="eventOffcanvas" style="width: 540px;">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title">
+      <i class="fas fa-calendar-alt me-2 text-orange"></i>
+      {% if creating %} Add Event {% else %} Edit Event {% endif %}
+      <span id="theme-title" class="text-muted small">
+        {% if theme %}for {{ theme.name }}{% endif %}
+      </span>
+    </h5>
+
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+
+  <div class="offcanvas-body">
+
+    <!-- FORM -->
+    <form method="post"
+          action="{% if creating %}{% url 'add_event' theme_id=theme.pk %}{% else %}{% url 'edit_event' pk=event.pk %}{% endif %}"
+          id="event-form"
+          novalidate>
+
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger small mb-3">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <!-- ACCORDION -->
+      <div class="accordion" id="eventAccordion">
+
+        <!-- BASIC -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#accBasic">
+              <i class="fas fa-info-circle me-2 text-orange"></i>Basic Information
+            </button>
+          </h2>
+          <div id="accBasic" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+
+              <!-- Threat -->
+              <div class="mb-3">
+                <label class="form-label">Threat</label>
+                {{ form.theme }}
+              </div>
+
+              <!-- Name -->
+              <div class="mb-3">
+                <label class="form-label">
+                  Name <span class="float-end text-muted"><span id="name-char-count">0</span>/30</span>
+                </label>
+                {{ form.name }}
+              </div>
+
+              <!-- Date -->
+              <div class="mb-3">
+                <label class="form-label">Date Identified</label>
+                {{ form.date_identified }}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- CLASSIFICATION -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accClassification">
+              <i class="fas fa-tags me-2 text-orange"></i>Classification
+            </button>
+          </h2>
+          <div id="accClassification" class="accordion-collapse collapse">
+            <div class="accordion-body">
+
+              <!-- RISK CARDS -->
+              <label class="form-label">Risk Rating</label>
+
+              <select name="risk_rating" id="risk_select" class="d-none">
+                {% for value,label in form.risk_rating.field.choices %}
+                  <option value="{{ value }}" {% if form.risk_rating.value == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+
+              <div class="row g-2 mb-3" id="risk_cards">
+                <div class="col-6 col-sm-3">
+                  <button type="button" class="risk-card btn w-100" data-value="LOW">
+                    <div class="risk-icon risk-low"><i class="fas fa-check-circle"></i></div>
+                    <div class="risk-label">Low</div>
+                  </button>
+                </div>
+
+                <div class="col-6 col-sm-3">
+                  <button type="button" class="risk-card btn w-100" data-value="MEDIUM">
+                    <div class="risk-icon risk-medium"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="risk-label">Medium</div>
+                  </button>
+                </div>
+
+                <div class="col-6 col-sm-3">
+                  <button type="button" class="risk-card btn w-100" data-value="HIGH">
+                    <div class="risk-icon risk-high"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="risk-label">High</div>
+                  </button>
+                </div>
+
+                <div class="col-6 col-sm-3">
+                  <button type="button" class="risk-card btn w-100" data-value="CRITICAL">
+                    <div class="risk-icon risk-critical"><i class="fas fa-skull-crossbones"></i></div>
+                    <div class="risk-label">Critical</div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- STATUS -->
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                {{ form.status }}
+              </div>
+
+              <!-- CONTROL IN PLACE -->
+              <div class="form-check form-switch mt-2">
+                {{ form.control_in_place }}
+                <label class="form-check-label">Control in Place</label>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- BUSINESS LINES -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accBL">
+              <i class="fas fa-briefcase me-2 text-orange"></i>Business Lines
+            </button>
+          </h2>
+          <div id="accBL" class="accordion-collapse collapse">
+            <div class="accordion-body">
+
+              <div class="business-lines-container">
+                {% for checkbox in form.impacted_lines %}
+                  <div class="form-check form-check-inline">
+                    {{ checkbox.tag }}
+                    <label class="form-check-label">{{ checkbox.choice_label }}</label>
+                  </div>
+                {% endfor %}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- TAXONOMY -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accTax">
+              <i class="fas fa-sitemap me-2 text-orange"></i>Risk Taxonomy
+            </button>
+          </h2>
+          <div id="accTax" class="accordion-collapse collapse">
+            <div class="accordion-body">
+
+              <label class="form-label">Level 1</label>
+              {{ form.risk_taxonomy_lv1 }}
+
+              <div class="mt-2">
+                <label class="form-label">Level 2</label>
+                <div id="lv2-options"></div>
+              </div>
+
+              <div class="mt-2">
+                <label class="form-label">Level 3</label>
+                <div id="lv3-options"></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#accDesc">
+              <i class="fas fa-align-left me-2 text-orange"></i>Description
+            </button>
+          </h2>
+          <div id="accDesc" class="accordion-collapse collapse">
+            <div class="accordion-body">
+              {{ form.description }}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="mt-4 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save me-2"></i>Save Event
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<style>
+.offcanvas-body { padding-bottom: 40px; }
+
+#risk_cards .risk-card {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  border:2px solid #dee2e6;
+  border-radius:.8rem;
+  background:#fff;
+  padding:.7rem .4rem;
+  transition:.15s;
+}
+#risk_cards .risk-card:hover { transform:translateY(-2px); }
+#risk_cards .risk-card.selected {
+  border-color:#ff6600;
+  box-shadow:0 0 0 .15rem rgba(255,102,0,.25);
+}
+.risk-icon{font-size:1.2rem}
+.risk-low{color:#28a745}
+.risk-medium{color:#ffc107}
+.risk-high{color:#fd7e14}
+.risk-critical{color:#dc3545}
+
+.accordion-button{font-weight:600}
+.accordion-button:not(.collapsed){color:#ff6600}
+
+.business-lines-container{
+  background:#f8f9fa;
+  padding:12px;
+  border-radius:6px;
+}
+</style>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+  /* ---------------- NAME COUNTER ---------------- */
+  const nameInput = document.querySelector('input[name="name"]');
+  const nameCounter = document.getElementById("name-char-count");
+  if (nameInput && nameCounter) {
+    const update = () => nameCounter.textContent = nameInput.value.length;
+    update();
+    nameInput.addEventListener("input", update);
+  }
+
+  /* ---------------- THEME TITLE LIVE ---------------- */
+  const themeSel = document.getElementById('id_theme');
+  if (themeSel) {
+    themeSel.addEventListener('change', () => {
+      const opt = themeSel.options[themeSel.selectedIndex];
+      document.getElementById('theme-title').textContent =
+        opt ? "for " + opt.text : "";
+    });
+  }
+
+  /* ---------------- RISK CARDS ---------------- */
+  const riskSelect = document.getElementById('risk_select');
+  const cards = document.querySelectorAll('#risk_cards .risk-card');
+
+  function selectCard(value) {
+    cards.forEach(c => c.classList.remove('selected'));
+    const card = [...cards].find(c => c.dataset.value === value);
+    if (card) card.classList.add('selected');
+    riskSelect.value = value;
+  }
+
+  cards.forEach(card => {
+    card.addEventListener('click', () => selectCard(card.dataset.value));
+  });
+
+  if (riskSelect.value) selectCard(riskSelect.value);
+
+  /* ---------------- BUSINESS LINES “ALL” ---------------- */
+  (function setupBusinessLines() {
+    const allCb = document.querySelector('input[name="impacted_lines"][value="All"]');
+    if (!allCb) return;
+
+    const cbs = [...document.querySelectorAll('input[name="impacted_lines"]')];
+    const evalCb = cbs.find(cb => cb.value === 'Evaluation in progress');
+    const targets = cbs.filter(cb => cb !== allCb && cb !== evalCb);
+
+    function applyAll(on) {
+      targets.forEach(cb => { cb.checked = on; cb.disabled = on; });
+      if (evalCb) { evalCb.checked = false; evalCb.disabled = on; }
+    }
+
+    function recompute() {
+      const allOn = targets.length && targets.every(cb => cb.checked);
+      allCb.checked = allOn;
+      targets.forEach(cb => cb.disabled = allOn);
+      if (evalCb) {
+        if (allOn) { evalCb.checked = false; evalCb.disabled = true; }
+        else evalCb.disabled = false;
+      }
+    }
+
+    allCb.addEventListener('change', () => applyAll(allCb.checked));
+    targets.forEach(cb => cb.addEventListener('change', recompute));
+    if (evalCb) evalCb.addEventListener('change', () => {
+      if (allCb.checked) evalCb.checked = false;
+    });
+
+    if (allCb.checked) applyAll(true); else recompute();
+  })();
+
+  /* ---------------- RISK TAXONOMY SCRIPT ---------------- */
+
+  let taxonomy = { hierarchical: [], flat: {} };
+  try { taxonomy = JSON.parse('{{ taxonomy_json|escapejs }}'); }
+  catch(e){ console.warn("taxonomy_json parse error:", e); }
+
+  const sel = { lv1: [], lv2: [], lv3: [] };
+  const parentOfLv2 = {};
+  const parentOfLv3 = {};
+
+  (taxonomy.hierarchical || []).forEach(l1 => {
+    (l1.children || []).forEach(l2 => {
+      parentOfLv2[l2.key] = l1.key;
+      (l2.children || []).forEach(l3 => {
+        parentOfLv3[l3.key] = l2.key;
+      });
+    });
+  });
+
+  const lv1Box = document.querySelectorAll('input[name="risk_taxonomy_lv1"]');
+  const lv2Wrap = document.getElementById('lv2-options');
+  const lv3Wrap = document.getElementById('lv3-options');
+
+  function getSelectedLv1() {
+    return [...document.querySelectorAll('input[name="risk_taxonomy_lv1"]:checked')].map(x => x.value);
+  }
+  function getSelectedLv2() {
+    return [...document.querySelectorAll('input[name="risk_taxonomy_lv2"]:checked')].map(x => x.value);
+  }
+  function getSelectedLv3() {
+    return [...document.querySelectorAll('input[name="risk_taxonomy_lv3"]:checked')].map(x => x.value);
+  }
+
+  function buildLv2() {
+    sel.lv1 = getSelectedLv1();
+    sel.lv2 = sel.lv2.filter(k2 => sel.lv1.includes(parentOfLv2[k2]));
+    sel.lv3 = sel.lv3.filter(k3 => sel.lv2.includes(parentOfLv3[k3]));
+
+    let html = "";
+    sel.lv1.forEach(k1 => {
+      const n1 = taxonomy.hierarchical.find(x => x.key === k1);
+      if (!n1) return;
+      html += `<div class="taxonomy-group mb-2"><div class="text-muted small fw-bold">${n1.label}</div>`;
+      n1.children.forEach(l2 => {
+        const checked = sel.lv2.includes(l2.key) ? "checked" : "";
+        html += `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="risk_taxonomy_lv2"
+                   value="${l2.key}" id="lv2-${l2.key}" ${checked}>
+            <label class="form-check-label" for="lv2-${l2.key}">${l2.label}</label>
+          </div>`;
+      });
+      html += `</div>`;
+    });
+
+    lv2Wrap.innerHTML = html;
+
+    document.querySelectorAll('input[name="risk_taxonomy_lv2"]').forEach(cb => {
+      cb.addEventListener('change', function() {
+        if (this.checked) sel.lv2.push(this.value);
+        else sel.lv2 = sel.lv2.filter(v => v !== this.value);
+        buildLv3();
+      });
+    });
+
+    buildLv3();
+  }
+
+  function buildLv3() {
+    let html = "";
+    sel.lv3 = sel.lv3.filter(k3 => sel.lv2.includes(parentOfLv3[k3]));
+
+    sel.lv2.forEach(k2 => {
+      const node2 = taxonomy.flat[k2];
+      if (!node2 || !node2.children) return;
+
+      html += `<div class="taxonomy-group mb-2"><div class="text-muted small fw-bold">${node2.label}</div>`;
+
+      node2.children.forEach(l3 => {
+        const checked = sel.lv3.includes(l3.key) ? "checked" : "";
+        html += `
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="risk_taxonomy_lv3"
+                   value="${l3.key}" id="lv3-${l3.key}" ${checked}>
+            <label class="form-check-label" for="lv3-${l3.key}">${l3.label}</label>
+          </div>`;
+      });
+      html += `</div>`;
+    });
+
+    lv3Wrap.innerHTML = html;
+
+    document.querySelectorAll('input[name="risk_taxonomy_lv3"]').forEach(cb => {
+      cb.addEventListener('change', function() {
+        if (this.checked) sel.lv3.push(this.value);
+        else sel.lv3 = sel.lv3.filter(v => v !== this.value);
+      });
+    });
+  }
+
+  lv1Box.forEach(cb => cb.addEventListener("change", buildLv2));
+  buildLv2();
+
+});
+</script>

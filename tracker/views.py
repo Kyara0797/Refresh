@@ -9,7 +9,8 @@ This version includes SharePoint-ready behaviors:
 
 All NEW/UPDATED lines are marked with `# NEW:` comments in English.
 """
-
+from django.db.models import Count
+from django.db.models.functions import Coalesce
 from django.db import transaction
 from django.db.models import Q, Case, When, IntegerField
 from django.contrib import messages
@@ -17,18 +18,20 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout
 from django.urls import reverse, reverse_lazy
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.generic import UpdateView, DeleteView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseRedirect, Http404
 from collections import OrderedDict
 
+
 from .models import (
     Category, Theme, Event, Source, UserAccessLog, SourceFileVersion,
     LINE_OF_BUSINESS_CHOICES,
     RISK_TAXONOMY_LV1, RISK_TAXONOMY_LV2, RISK_TAXONOMY_LV3,
-    STATUS_CHOICES,
+    PHASE_STATUS_CHOICES,
+    ONSET_TIMELINE_CHOICES,
 )
 from .forms import ThemeForm, EventForm, SourceForm, RegisterForm
 
@@ -44,6 +47,13 @@ from django.core.files.base import File
 
 from .models import TempUpload
 from django.core.files.storage import default_storage   # NEW: used for move_between_state
+from django.http.response import HttpResponse, HttpResponseNotAllowed
+from django.template.loader import render_to_string
+from tracker.models import RISK_COLORS, RISK_CHOICES
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from pip._vendor.rich import theme
+
 
 # Logger for simple audit trail
 logger = logging.getLogger(__name__)
@@ -99,7 +109,7 @@ def _resolve_theme_from_request(request, theme_id=None, theme_pk=None):
 def _prefill_event_initial(request, theme: Theme | None):
     initial = {
         "theme": theme.pk if theme else None,
-        "risk_rating": request.GET.get("risk_rating") or request.GET.get("risk") or "LOW",
+        "risk_rating": request.GET.get("risk_rating") or request.GET.get("risk") or "low",
     }
     if request.GET.get("name"):
         initial["name"] = request.GET.get("name")
@@ -287,19 +297,159 @@ def _client_ip(request):
 # =========================================================
 # Dashboard (public)
 # =========================================================
-
 def dashboard(request):
-    categories = Category.objects.all()
+    categories = Category.objects.all().order_by("name")
     MAX_ROWS = 200
-    themes = Theme.objects.filter(is_active=True).all().order_by('-created_at')[:MAX_ROWS]
-    events = Event.objects.filter(is_active=True).all().order_by('-date_identified')[:MAX_ROWS]
-    return render(request, 'tracker/dashboard.html', {
-        'categories': categories,
-        'themes': themes,
-        'events': events
-    })
 
+    # --- Parámetros GET ---
+    category_id = request.GET.get("category_id")
+    selected_category = None
+    
+    # --- Parámetros de búsqueda ---
+    threats_search = request.GET.get('threats_search', '').strip()
+    events_search = request.GET.get('events_search', '').strip()
+    
+    # --- Parámetros de paginación ---
+    threat_page_number = request.GET.get('threat_page', 1)
+    event_page_number = request.GET.get('event_page', 1)
+    
+    # --- Parámetros de items por página ---
+    themes_per_page = request.GET.get('themes_per_page', '5')
+    events_per_page = request.GET.get('events_per_page', '5')
+    
+    # --- Parámetros de archived ---
+    show_archived_threats = request.GET.get('show_archived_threats') == '1'
+    show_archived_events = request.GET.get('show_archived_events') == '1'
+    
+    # --- Variables para tracking si es "all" ---
+    show_all_themes = themes_per_page == 'all'
+    show_all_events = events_per_page == 'all'
+    
+    # --- Verificar si es AJAX request ---
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # --- Cargar themes ---
+    themes = Theme.objects.all().select_related("category").annotate(
+        active_event_count=Count('events', filter=Q(events__is_active=True))
+    ).order_by("-created_at")
 
+    # --- Cargar events ---
+    events = Event.objects.all().select_related(
+        "theme", "theme__category"
+    ).order_by("-date_identified")
+
+    # --- Filtro por categoría ---
+    if category_id and category_id.isdigit():
+        try:
+            selected_category = Category.objects.get(pk=category_id)
+            themes = themes.filter(category=selected_category)
+            events = events.filter(theme__category=selected_category)
+        except Category.DoesNotExist:
+            selected_category = None
+
+    # --- Filtro por búsqueda de THREATS ---
+    if threats_search:
+        themes = themes.filter(
+            Q(name__icontains=threats_search) |
+            Q(category__name__icontains=threats_search)
+        )
+    
+    # --- Filtro por búsqueda de EVENTS ---
+    if events_search:
+        events = events.filter(
+            Q(name__icontains=events_search) |
+            Q(description__icontains=events_search) |
+            Q(theme__name__icontains=events_search)
+        )
+
+    # --- Filtro por archived status ---
+    if not show_archived_threats:
+        themes = themes.filter(is_active=True)
+        
+    if not show_archived_events:
+        events = events.filter(is_active=True)
+
+    # --- Aplicar límite de filas ---
+    themes = themes[:MAX_ROWS]
+    events = events[:MAX_ROWS]
+
+    # --- PAGINACIÓN PARA THEMES ---
+    if show_all_themes:
+        # Para "all", usar un número muy grande como items por página
+        THEMES_PER_PAGE = 1000  # Un número grande que cubra todos los registros
+    else:
+        try:
+            THEMES_PER_PAGE = int(themes_per_page)
+        except ValueError:
+            THEMES_PER_PAGE = 5
+    
+    themes_paginator = Paginator(themes, THEMES_PER_PAGE)
+    try:
+        themes_page = themes_paginator.get_page(threat_page_number)
+    except PageNotAnInteger:
+        themes_page = themes_paginator.get_page(1)
+    except EmptyPage:
+        themes_page = themes_paginator.get_page(themes_paginator.num_pages)
+
+    # --- PAGINACIÓN PARA EVENTS ---
+    if show_all_events:
+        # Para "all", usar un número muy grande como items por página
+        EVENTS_PER_PAGE = 1000  # Un número grande que cubra todos los registros
+    else:
+        try:
+            EVENTS_PER_PAGE = int(events_per_page)
+        except ValueError:
+            EVENTS_PER_PAGE = 5
+    
+    events_paginator = Paginator(events, EVENTS_PER_PAGE)
+    try:
+        events_page = events_paginator.get_page(event_page_number)
+    except PageNotAnInteger:
+        events_page = events_paginator.get_page(1)
+    except EmptyPage:
+        events_page = events_paginator.get_page(events_paginator.num_pages)
+
+    # --- Si es AJAX request, devolver solo la tabla solicitada ---
+    if is_ajax:
+        partial_type = request.GET.get('partial', '')
+        
+        if partial_type == 'themes' or 'threats_search' in request.GET or 'show_archived_threats' in request.GET or 'themes_per_page' in request.GET:
+            themes_html = render_to_string("tracker/partials/theme_table.html", {
+                "themes_page": themes_page,
+                "selected_category": selected_category,
+                "show_archived_threats": show_archived_threats,
+                "themes_per_page": themes_per_page,
+                "show_all_themes": show_all_themes,
+            }, request=request)
+            return HttpResponse(themes_html)
+        
+        elif partial_type == 'events' or 'events_search' in request.GET or 'show_archived_events' in request.GET or 'events_per_page' in request.GET:
+            events_html = render_to_string("tracker/partials/event_list_partial.html", {
+                "events_page": events_page,
+                "selected_category": selected_category,
+                "show_archived_events": show_archived_events,
+                "events_per_page": events_per_page,
+                "show_all_events": show_all_events,
+            }, request=request)
+            return HttpResponse(events_html)
+
+    # --- Contexto para renderizado normal ---
+    context = {
+        "categories": categories,
+        "themes_page": themes_page,
+        "events_page": events_page,
+        "selected_category": selected_category,
+        "show_archived_threats": show_archived_threats,
+        "show_archived_events": show_archived_events,
+        "threats_search": threats_search,
+        "events_search": events_search,
+        "themes_per_page": themes_per_page,
+        "events_per_page": events_per_page,
+        "show_all_themes": show_all_themes,
+        "show_all_events": show_all_events,
+    }
+
+    return render(request, "tracker/dashboard.html", context)
 # =========================================================
 # Threats / Themes
 # =========================================================
@@ -310,8 +460,13 @@ def theme_list_all(request):
     show_archived = request.GET.get('show_archived') == '1'
     q = (request.GET.get('q') or '').strip()
 
+    # FIX: cambiamos event_count a active_event_count (sin chocar con nada)
     themes = (Theme.objects
               .select_related('category')
+              .annotate(
+                  active_event_count=Count('events', filter=Q(events__is_active=True)),
+                  total_event_count=Count('events')
+              )
               .order_by('name'))
 
     if not show_archived:
@@ -364,19 +519,37 @@ class ThemeDetailView(DetailView):
     context_object_name = 'theme'
 
 
-# Create/edit: LOGIN required
-class ThemeUpdateView(AdminRequiredMixin, UpdateView):
-    model = Theme
-    form_class = ThemeForm
-    template_name = 'tracker/theme_edit.html'
+def theme_detail_offcanvas(request, pk):
+    theme = get_object_or_404(Theme, pk=pk)
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-        messages.success(self.request, "Threat updated successfully")
-        return response
+    show_admin_actions = request.user.is_staff or request.user.is_superuser
 
-    def get_success_url(self):
-        return reverse_lazy('view_theme', kwargs={'pk': self.object.pk})
+    html = render_to_string(
+        "tracker/offcanvas/theme_detail_offcanvas.html",
+        {
+            "theme": theme,
+            "show_admin_actions": show_admin_actions,
+        },
+        request=request
+    )
+
+    return JsonResponse({"success": True, "html": html})
+
+
+    
+# # Create/edit: LOGIN required
+# class ThemeUpdateView(AdminRequiredMixin, UpdateView):
+#     model = Theme
+#     form_class = ThemeForm
+#     template_name = 'tracker/theme_edit.html'
+
+#     def form_valid(self, form):
+#         response = super().form_valid(form)
+#         messages.success(self.request, "Threat updated successfully")
+#         return response
+
+#     def get_success_url(self):
+#         return reverse_lazy('view_theme', kwargs={'pk': self.object.pk})
 
 
 class ThemeDeleteView(AdminRequiredMixin, UserPassesTestMixin, DeleteView):
@@ -412,8 +585,28 @@ def add_theme(request):
             theme = form.save(commit=False)
             theme.created_by = request.user
             theme.save()
+            
+            # Soporte para AJAX
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Theme created successfully',
+                    'theme_id': theme.id,
+                    'redirect_url': reverse('view_theme', kwargs={'pk': theme.pk})
+                })
+            
+            # Comportamiento normal existente
             messages.success(request, "Theme created successfully")
             return redirect('view_theme', pk=theme.pk)
+        
+        # Manejo de errores para AJAX
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors.get_json_data(),
+                'message': 'Please correct the errors below.'
+            })
+        
         messages.error(request, "Please correct the errors below.")
     else:
         form = ThemeForm(initial=initial)
@@ -423,17 +616,33 @@ def add_theme(request):
 
 @admin_required
 def toggle_theme_active(request, pk):
+    
     if request.method != "POST":
         messages.error(request, "Invalid method.")
         return redirect('theme_list_all')
 
     theme = get_object_or_404(Theme, pk=pk)
-    theme.is_active = not theme.is_active
-    theme.save(update_fields=['is_active'])
-    messages.success(request, "Threat restored." if theme.is_active else "Threat archived.")
+    
+    with transaction.atomic():
+        theme.is_active = not theme.is_active
+        theme.save(update_fields=['is_active'])
+        
+        # ARCHIVAR: Si estamos archivando el theme, archivar events y sources también
+        if not theme.is_active:
+            events = theme.events.all()
+            events.update(is_active=False)
+            event_ids = events.values_list('id', flat=True)
+            Source.objects.filter(event_id__in=event_ids).update(is_active=False)
+            messages.success(request, "Threat archived along with all associated events and sources.")
+        else:
+            # RESTAURAR: Al restaurar el theme, restaurar los events también
+            events = theme.events.all()
+            events.update(is_active=True)
+            event_ids = events.values_list('id', flat=True)
+            Source.objects.filter(event_id__in=event_ids).update(is_active=True)
+            messages.success(request, "Threat restored along with all associated events and sources.")
+    
     return redirect(request.META.get('HTTP_REFERER') or 'theme_list_all')
-
-
 # =========================================================
 # Events
 # =========================================================
@@ -689,49 +898,104 @@ def add_event(request, theme_id=None, theme_pk=None):
         },
     )
 
-
 @admin_required
 def edit_event(request, pk=None, theme_pk=None):
+    
+    theme = None
+    event = None
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # Obtener el evento si existe
     if pk:
         event = get_object_or_404(Event, pk=pk)
-        theme = event.theme
-    else:
-        theme = get_object_or_404(Theme, pk=theme_pk)
-        event = Event(theme=theme, created_by=request.user)
-
+    
     if request.method == "POST":
-        form = EventForm(request.POST, instance=event)  #Esta línea
+        form = EventForm(request.POST, instance=event)
+        
         if form.is_valid():
-            event = form.save(commit=False)
-
-            event.impacted_lines = request.POST.getlist("impacted_lines") or form.cleaned_data.get("impacted_lines", [])
-            event.risk_taxonomy_lv1 = request.POST.getlist("risk_taxonomy_lv1") or []
-            event.risk_taxonomy_lv2 = request.POST.getlist("risk_taxonomy_lv2") or []
-            event.risk_taxonomy_lv3 = request.POST.getlist("risk_taxonomy_lv3") or []
-
-            event.save()
-            messages.success(request, "Event saved successfully!")
-            return redirect("view_event", event_id=event.id)
-        messages.error(request, "Please correct the errors below")
+            try:
+                with transaction.atomic():
+                    event = form.save(commit=False)
+                    
+                    # Manejar campos de listas
+                    event.impacted_lines = request.POST.getlist("impacted_lines") or []
+                    event.risk_taxonomy_lv1 = request.POST.getlist("risk_taxonomy_lv1") or []
+                    event.risk_taxonomy_lv2 = request.POST.getlist("risk_taxonomy_lv2") or []
+                    event.risk_taxonomy_lv3 = request.POST.getlist("risk_taxonomy_lv3") or []
+                    
+                    # Para nuevos eventos, establecer created_by
+                    if not event.pk:
+                        event.created_by = request.user
+                    
+                    event.save()
+                
+                # Respuesta para AJAX
+                if is_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Event saved successfully!',
+                        'event_id': event.id,
+                        'redirect_url': reverse('view_event', kwargs={'event_id': event.id})
+                    })
+                
+                messages.success(request, "Event saved successfully!")
+                return redirect("view_event", event_id=event.id)
+                
+            except Exception as e:
+                logger.error(f"Error saving event: {e}", exc_info=True)
+                error_msg = "Error saving event data. Please try again."
+                if is_ajax:
+                    return JsonResponse({'success': False, 'message': error_msg}, status=500)
+                messages.error(request, error_msg)
+        else:
+            # Formulario inválido
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors.get_json_data(),
+                    'message': 'Please correct the errors below'
+                }, status=400)
+            messages.error(request, "Please correct the errors below")
+    
     else:
-        form = EventForm(instance=event, initial_theme=theme) if pk is None else EventForm(instance=event)
+        # GET request - mostrar formulario
+        form = EventForm(instance=event)
+        if event and event.pk:
+            # Pre-popular campos de taxonomía
+            form.initial.update({
+                'risk_taxonomy_lv1': event.risk_taxonomy_lv1 or [],
+                'risk_taxonomy_lv2': event.risk_taxonomy_lv2 or [],
+                'risk_taxonomy_lv3': event.risk_taxonomy_lv3 or [],
+            })
 
+    # Preparar datos de taxonomía para el template
     sel_lv1, sel_lv2, sel_lv3 = _selected_lists_from_event_or_initial(event, form.initial)
-    taxonomy_json = json.dumps(build_taxonomy_json(sel_lv1, sel_lv2, sel_lv3), ensure_ascii=False)
-
-    return render(
-        request,
-        "tracker/event_edit.html",
-        {
-            "form": form,
-            "event": event if pk else None,
-            "theme": theme,
-            "creating": pk is None,
-            "RISK_TAXONOMY_LV1": RISK_TAXONOMY_LV1,
-            "taxonomy_json": taxonomy_json,
-        },
+    taxonomy_json = json.dumps(
+        build_taxonomy_json(sel_lv1, sel_lv2, sel_lv3), 
+        ensure_ascii=False
     )
 
+    context = {
+        "form": form,
+        "event": event,
+        "theme": event.theme if event else None,
+        "creating": not event or not event.pk,
+        "RISK_TAXONOMY_LV1": RISK_TAXONOMY_LV1,
+        "taxonomy_json": taxonomy_json,
+    }
+    
+    # Para AJAX, usar un template parcial
+    if is_ajax:
+        from django.template.loader import render_to_string
+        html_content = render_to_string("tracker/partials/event_edit_form.html", context, request=request)
+        return JsonResponse({
+            'success': True,
+            'html': html_content,
+            'title': f"{'Edit' if event and event.pk else 'Create'} Event"
+        })
+    
+    # Para requests normales
+    return render(request, "tracker/event_edit.html", context)
 
 class EventDeleteView(AdminRequiredMixin, UserPassesTestMixin, DeleteView):
     """Delete Event remains admin-only; create/edit already allowed for logged users."""
@@ -766,15 +1030,39 @@ def add_event_redirect(request):
 @admin_required
 @login_required
 def toggle_event_active(request, pk):
+    # event = get_object_or_404(Event, pk=pk)
+
+    # event.is_active = not event.is_active
+    # event.save(update_fields=["is_active"])
+
+    # if event.is_active:
+    #     messages.success(request, "Event restored.")
+    # else:
+    #     messages.success(request, "Event archived.")
+
+    # next_url = request.POST.get("next") or request.GET.get("next")
+    # if not next_url:
+    #     if event.is_active:
+    #         next_url = reverse("view_event", kwargs={"event_id": event.pk})
+    #     else:
+    #         next_url = reverse("view_theme", kwargs={"pk": event.theme_id})
+
+    # return redirect(next_url)
     event = get_object_or_404(Event, pk=pk)
-
-    event.is_active = not event.is_active
-    event.save(update_fields=["is_active"])
-
-    if event.is_active:
-        messages.success(request, "Event restored.")
-    else:
-        messages.success(request, "Event archived.")
+    
+    with transaction.atomic():
+        event.is_active = not event.is_active
+        event.save(update_fields=["is_active"])
+        
+        # ARCHIVAR/RESTAURAR: Siempre sincronizar con los sources
+        if not event.is_active:
+            # Archivar sources
+            Source.objects.filter(event=event).update(is_active=False)
+            messages.success(request, "Event archived along with all associated sources.")
+        else:
+            # Restaurar sources
+            Source.objects.filter(event=event).update(is_active=True)
+            messages.success(request, "Event restored along with all associated sources.")
 
     next_url = request.POST.get("next") or request.GET.get("next")
     if not next_url:
@@ -784,7 +1072,6 @@ def toggle_event_active(request, pk):
             next_url = reverse("view_theme", kwargs={"pk": event.theme_id})
 
     return redirect(next_url)
-
 
 # =========================================================
 # Sources
@@ -1038,8 +1325,6 @@ def add_source(request, event_pk):
             "staged_extras": [],
         },
     )
-
-
 class SourceUpdateView(AdminRequiredMixin, UpdateView):
     model = Source
     form_class = SourceForm
@@ -1464,20 +1749,22 @@ def register(request):
     Only superusers can create accounts from the UI.
     Does not auto-login the new user to avoid kicking the admin.
     """
-    if not request.user.is_superuser:
-        messages.error(request, 'You do not have permission to access this page.')
-        return redirect('dashboard')
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             new_user = form.save(commit=False)
             new_user.is_active = True
             new_user.save()
-            messages.success(request, f'User “{new_user.username}” created successfully.')
+            messages.success(request, f'User "{new_user.username}" created successfully.')
+            
+            
+            if request.META.get('HTTP_REFERER'):
+                return redirect(f"{request.META.get('HTTP_REFERER')}?registered=success")
             return redirect('dashboard')
         messages.error(request, "Please correct the errors below.")
     else:
         form = RegisterForm()
+    
     return render(request, 'registration/register.html', {'form': form})
 
 
@@ -1532,7 +1819,7 @@ def _clear_staged(batch_id: str, only_ids: list[int] | None = None):
 
 
 # ====== Forms (CreateUserForm) ======
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
 from django import forms
 
@@ -1558,3 +1845,764 @@ class CreateUserForm(UserCreationForm):
         if commit:
             user.save()
         return user
+
+# ===========================
+#   ADD EVENT — OFFCANVAS
+# ===========================
+@login_required
+def add_event_offcanvas(request):
+    """
+    Add Event offcanvas con validación COMPLETA
+    """
+    theme = _resolve_theme_from_request(request)
+
+    # ================= POST =================
+    if request.method == "POST":
+        
+        # --- PETICIÓN PARCIAL (taxonomy sync) ---
+        if (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest"
+            and "__partial__" in request.POST
+        ):
+            try:
+                sel_lv1 = request.POST.getlist("risk_taxonomy_lv1") or []
+                sel_lv2 = request.POST.getlist("risk_taxonomy_lv2") or []
+                sel_lv3 = request.POST.getlist("risk_taxonomy_lv3") or []
+
+                # Generar opciones de Level 2 basadas en Level 1
+                lv2_options_html = ""
+                if sel_lv1:
+                    for lv1_key in sel_lv1:
+                        lv2_items = RISK_TAXONOMY_LV2.get(lv1_key, [])
+                        if lv2_items:
+                            lv1_label = dict(RISK_TAXONOMY_LV1).get(lv1_key, lv1_key)
+                            lv2_options_html += '<div class="taxonomy-group mb-2">'
+                            lv2_options_html += f'<div class="fw-bold small text-muted">{lv1_label} <span class="option-count">0/{len(lv2_items)}</span></div>'
+                            
+                            for lv2_key, lv2_label in lv2_items:
+                                checked = 'checked' if lv2_key in sel_lv2 else ''
+                                safe_id = lv2_key.replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('.', '')
+                                # 🔥 FIX: Usar .format() en lugar de f-string para evitar conflicto con llaves
+                                lv2_options_html += '''
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="risk_taxonomy_lv2" value="{value}" 
+                                           id="lv2_{id}" {checked}>
+                                    <label class="form-check-label" for="lv2_{id}">
+                                        {label}
+                                    </label>
+                                </div>
+                                '''.format(value=lv2_key, id=safe_id, checked=checked, label=lv2_label)
+                            lv2_options_html += '</div>'
+                
+                if not lv2_options_html:
+                    lv2_options_html = '<p class="text-muted small">Select Level 1 options first</p>'
+
+                # Generar opciones de Level 3 basadas en Level 2
+                lv3_options_html = ""
+                if sel_lv2:
+                    for lv2_key in sel_lv2:
+                        lv3_items = RISK_TAXONOMY_LV3.get(lv2_key, [])
+                        if lv3_items:
+                            # Buscar label de Level 2
+                            lv2_label = lv2_key
+                            for items in RISK_TAXONOMY_LV2.values():
+                                for k, v in items:
+                                    if k == lv2_key:
+                                        lv2_label = v
+                                        break
+                            
+                            lv3_options_html += '<div class="taxonomy-group mb-2">'
+                            lv3_options_html += f'<div class="fw-bold small text-muted">{lv2_label} <span class="option-count">0/{len(lv3_items)}</span></div>'
+                            
+                            for lv3_key, lv3_label in lv3_items:
+                                checked = 'checked' if lv3_key in sel_lv3 else ''
+                                safe_id = lv3_key.replace(' ', '_').replace('(', '').replace(')', '').replace(',', '').replace('.', '')
+                                # 🔥 FIX: Usar .format() en lugar de f-string
+                                lv3_options_html += '''
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                           name="risk_taxonomy_lv3" value="{value}" 
+                                           id="lv3_{id}" {checked}>
+                                    <label class="form-check-label" for="lv3_{id}">
+                                        {label}
+                                    </label>
+                                </div>
+                                '''.format(value=lv3_key, id=safe_id, checked=checked, label=lv3_label)
+                            lv3_options_html += '</div>'
+                
+                if not lv3_options_html:
+                    lv3_options_html = '<p class="text-muted small">Select Level 2 options first</p>'
+
+                response_html = f'''
+                <div id="lv2-options">
+                    {lv2_options_html}
+                </div>
+                <div id="lv3-options">
+                    {lv3_options_html}
+                </div>
+                '''
+
+                # 🔥 FIX: Retornar el HTML generado
+                return JsonResponse({
+                    "success": True,
+                    "html": response_html
+                })
+            
+            except Exception as e:
+                import traceback
+                print("❌ Error in partial update:")
+                print(traceback.format_exc())
+                
+                return JsonResponse({
+                    "success": False,
+                    "message": "Error updating taxonomy options"
+                }, status=500)
+
+        # --- GUARDAR EVENTO (submit completo) ---
+        
+        sel_lv1 = request.POST.getlist("risk_taxonomy_lv1") or []
+        sel_lv2 = request.POST.getlist("risk_taxonomy_lv2") or []
+        sel_lv3 = request.POST.getlist("risk_taxonomy_lv3") or []
+        
+        post_data = request.POST.copy()
+        post_data.setlist("risk_taxonomy_lv1", sel_lv1)
+        post_data.setlist("risk_taxonomy_lv2", sel_lv2)
+        post_data.setlist("risk_taxonomy_lv3", sel_lv3)
+        
+        form = EventForm(post_data)
+        form.fields['risk_taxonomy_lv2'].choices = form._valid_lv2_from(sel_lv1)
+        form.fields['risk_taxonomy_lv3'].choices = form._valid_lv3_from(sel_lv2)
+        
+        if form.is_valid():
+            event = form.save(commit=False)
+            event.created_by = request.user
+            if theme:
+                event.theme = theme
+
+            event.impacted_lines = form.cleaned_data.get("impacted_lines", [])
+            event.risk_taxonomy_lv1 = sel_lv1
+            event.risk_taxonomy_lv2 = sel_lv2
+            event.risk_taxonomy_lv3 = sel_lv3
+            
+            event.save()
+
+            return JsonResponse({
+                "success": True,
+                "message": "Event created successfully!",
+                "event_id": event.pk
+            })
+        
+        return JsonResponse({
+            "success": False,
+            "errors": {
+                field: [str(error) for error in errors]
+                for field, errors in form.errors.items()
+            }
+        }, status=400)
+
+    # ================= GET (cargar formulario inicial) =================
+    initial = {}
+    if theme:
+        initial['theme'] = theme
+        initial['risk_rating'] = theme.risk_rating
+
+    form = EventForm(initial=initial)
+
+    taxonomy_json = json.dumps({
+        "lv1": {},
+        "lv2": {},
+        "lv3": {}
+    })
+
+    html = render_to_string(
+        "tracker/offcanvas/add_event_offcanvas.html",
+        {
+            "form": form,
+            "theme": theme,
+            "taxonomy_json": taxonomy_json,
+            "RISK_TAXONOMY_LV1": RISK_TAXONOMY_LV1,
+            "LINE_OF_BUSINESS_CHOICES": LINE_OF_BUSINESS_CHOICES,
+        },
+        request=request
+    )
+
+    return JsonResponse({
+        "success": True,
+        "html": html
+    })
+
+# ===========================
+#   EDIT EVENT — OFFCANVAS
+# ===========================
+def edit_event_offcanvas(request, pk):
+
+    event = get_object_or_404(Event, pk=pk)
+
+    if request.method == "POST":
+        # El POST lo manejará tu vista normal edit_event
+        pass
+
+    form = EventForm(instance=event)
+
+    return render(request, "tracker/offcanvas/event_form_offcanvas.html", {
+        "creating": False,
+        "form": form,
+        "event": event,
+        "theme": event.theme,
+    })
+    
+    
+
+    """
+    Procesar el formulario de Add Source desde offcanvas
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid method"})
+    
+    try:
+        # Aquí va la lógica de tu función add_source_global_offcanvas
+        # que ya tienes en views.py, adaptada para retornar JSON
+        
+        # Crear el source usando la misma lógica que tu función original
+        # ... (tu lógica existente para crear sources)
+        
+        # Ejemplo simplificado:
+        event_id = request.POST.get('event')
+        name = request.POST.get('name')
+        
+        if not event_id:
+            return JsonResponse({
+                "success": False,
+                "errors": {"event": ["Please select an event"]}
+            })
+        
+        if not name or len(name) < 3:
+            return JsonResponse({
+                "success": False,
+                "errors": {"name": ["Name must be at least 3 characters"]}
+            })
+        
+        # Crear el source (simplificado - usa tu lógica real)
+        source = Source.objects.create(
+            event_id=event_id,
+            name=name,
+            source_date=request.POST.get('source_date'),
+            summary=request.POST.get('summary'),
+            # ... otros campos
+        )
+        
+        return JsonResponse({
+            "success": True,
+            "message": "Source created successfully!",
+            "redirect_url": f"/event/{source.event_id}/"  # Redirigir al evento
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "message": str(e)
+        })
+
+    upload_batch = str(uuid.uuid4())
+
+    html = render(
+        request,
+        "add_source_offcanvas.html",
+        {
+            "creating": True,
+            "event": None,
+            "form": SourceForm(),
+            "cancel_url": reverse_lazy("dashboard"),
+            "existing_summaries_json": "[]",
+            "upload_batch": upload_batch,
+            "staged_main": None,
+            "staged_extras": [],
+        }
+    )
+
+    return html
+
+
+
+def theme_list_offcanvas(request):
+    """
+    Versión offcanvas de la lista completa de threats.
+    Compatible con parámetros del dashboard.
+    """
+    # Parámetros del dashboard
+    show_archived = request.GET.get('show_archived') == '1' or request.GET.get('show_archived_threats') == '1'
+    q = (request.GET.get('q') or request.GET.get('threats_search') or '').strip()
+    
+    # Si viene del dashboard, también puede tener category_id
+    category_id = request.GET.get('category_id')
+    
+    themes = (Theme.objects
+              .select_related('category')
+              .annotate(
+                  active_event_count=Count('events', filter=Q(events__is_active=True)),
+                  total_event_count=Count('events')
+              )
+              .order_by('name'))
+
+    # Filtrar por categoría si se especifica
+    if category_id and category_id.isdigit():
+        themes = themes.filter(category_id=category_id)
+
+    if not show_archived:
+        themes = themes.filter(is_active=True)
+
+    if q:
+        themes = themes.filter(
+            Q(name__icontains=q) |
+            Q(category__name__icontains=q)
+        )
+
+    context = {
+        'themes': themes,
+        'is_paginated': False,
+        'search_query': q,
+        'show_archived': show_archived,
+        'category_id': category_id,
+        'is_admin': request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser),
+    }
+    
+    # Si es AJAX request (cuando se llama desde el dashboard), devolver solo el contenido
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if is_ajax:
+        return render(request, 'tracker/partials/theme_list_offcanvas_content.html', context)
+    
+    # Para el botón "View All" del dashboard
+    return render(request, 'tracker/offcanvas/theme_list_offcanvas.html', context)
+
+@login_required
+def add_theme_offcanvas(request):
+    """
+    Vista AJAX para crear themes desde offcanvas
+    """
+    # ========== POST (guardar) ==========
+    if request.method == "POST":
+        form = ThemeForm(request.POST)
+        
+        if form.is_valid():
+            theme = form.save(commit=False)
+            theme.created_by = request.user
+            theme.save()
+            
+            return JsonResponse({
+                "success": True,
+                "theme_id": theme.id,
+                "message": "Threat created successfully!"
+            })
+        else:
+            # Retornar errores
+            return JsonResponse({
+                "success": False,
+                "errors": {
+                    field: [str(error) for error in errors]
+                    for field, errors in form.errors.items()
+                }
+            })
+    
+    # ========== GET (cargar formulario) ==========
+    form = ThemeForm()
+    categories = Category.objects.all().order_by('name')
+    
+    html = render_to_string(
+        "tracker/offcanvas/add_theme_offcanvas.html",
+        {
+            "form": form,
+            "categories": categories,
+        },
+        request=request
+    )
+    
+    return JsonResponse({
+        "success": True,
+        "html": html
+    })
+
+    # ---------------- POST ----------------
+    if request.method == "POST" and request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        
+        name = request.POST.get("name", "").strip()
+        category_id = request.POST.get("category")
+        risk_rating = request.POST.get("risk_rating", "").lower()
+        onset_timeline = request.POST.get("onset_timeline")
+
+        errors = {}
+
+        # Validaciones
+        if not name or len(name) < 3:
+            errors["name"] = "Name must be at least 3 characters."
+
+        if not category_id:
+            errors["category"] = "Please select a category."
+
+        if not risk_rating:
+            errors["risk_rating"] = "Please select a risk rating."
+
+        if not onset_timeline:
+            errors["onset_timeline"] = "Please select an onset timeline."
+
+        # Evitar duplicados
+        if Theme.objects.filter(name__iexact=name, category_id=category_id).exists():
+            errors["name"] = "This threat already exists in this category."
+
+        if errors:
+            return JsonResponse({"success": False, "errors": errors})
+
+        # Crear registro
+        category = Category.objects.get(pk=category_id)
+        new_theme = Theme.objects.create(
+            name=name,
+            category=category,
+            risk_rating=risk_rating,
+            onset_timeline=onset_timeline
+        )
+
+        # RESPUESTA CORRECTA → SOLO enviamos el ID y la URL
+        return JsonResponse({
+            "success": True,
+            "message": "Threat created successfully!",
+            "theme_id": new_theme.id,
+            "redirect_url": reverse("theme_detail_offcanvas", args=[new_theme.id])
+        })
+
+    # ---------------- GET ----------------
+    categories = Category.objects.all()
+    return render(request, "tracker/offcanvas/add_theme_offcanvas.html", {
+        "categories": categories
+    })
+
+
+
+
+def login_view(request):
+    next_url = request.GET.get("next", "dashboard")
+
+    if request.method == "POST":
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)  # CREA sessionid
+            return redirect(request.POST.get("next") or "dashboard")
+    else:
+        form = AuthenticationForm()
+
+    return render(request, "tracker/login.html", {
+        "form": form,
+        "next": next_url
+    })
+    
+    
+
+@login_required
+def edit_theme_offcanvas(request, pk):
+    theme = get_object_or_404(Theme, pk=pk)
+
+    # ========= GET → cargar formulario =========
+    if request.method == "GET":
+        html = render_to_string(
+            "tracker/offcanvas/edit_theme_offcanvas.html",
+            {
+                "theme": theme,
+                "categories": Category.objects.all(),
+                "ONSET_TIMELINE_CHOICES": ONSET_TIMELINE_CHOICES,
+            },
+            request=request
+        )
+        return JsonResponse({"html": html})
+
+    # ========= POST → guardar =========
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        category_id = request.POST.get("category")
+        risk_rating = request.POST.get("risk_rating")
+        onset_timeline = request.POST.get("onset_timeline")
+
+        errors = {}
+
+        if not name or len(name) < 3:
+            errors["name"] = "Name must be at least 3 characters."
+
+        if not category_id:
+            errors["category"] = "Please select a category."
+
+        if not risk_rating:
+            errors["risk_rating"] = "Please select a risk rating."
+
+        if not onset_timeline:
+            errors["onset_timeline"] = "Please select onset timeline."
+
+        # Evitar duplicados (excepto el mismo theme)
+        if Theme.objects.filter(
+            name__iexact=name,
+            category_id=category_id
+        ).exclude(pk=theme.pk).exists():
+            errors["name"] = "Another Threat with this name already exists in this category."
+
+        if errors:
+            return JsonResponse({"success": False, "errors": errors})
+
+        # Guardar cambios
+        theme.name = name
+        theme.category_id = category_id
+        theme.risk_rating = risk_rating
+        theme.onset_timeline = onset_timeline
+        theme.save()
+
+        # Recargar detalle actualizado
+        detail_html = render_to_string(
+            "tracker/offcanvas/theme_detail_offcanvas.html",
+            {
+                "theme": theme,
+                "show_admin_actions": request.user.is_staff or request.user.is_superuser,
+            },
+            request=request
+        )
+
+        return JsonResponse({
+            "success": True,
+            "html": detail_html,
+            "theme_id": theme.pk
+        })
+
+    return HttpResponseNotAllowed(["GET", "POST"])
+
+
+@login_required
+def event_detail_offcanvas(request, pk):  # 🔥 CAMBIO: event_id → pk
+    """
+    Vista offcanvas de detalle de un Event
+    """
+    event = get_object_or_404(Event, pk=pk)  # ✅ Usar pk
+    
+    # Preparar labels de taxonomía (con protección contra None)
+    risk_lv1_labels = [dict(RISK_TAXONOMY_LV1).get(v, v) for v in (event.risk_taxonomy_lv1 or [])]
+    
+    risk_lv2_labels = []
+    for lv2_val in (event.risk_taxonomy_lv2 or []):
+        found = False
+        for items in RISK_TAXONOMY_LV2.values():
+            for k, label in items:
+                if k == lv2_val:
+                    risk_lv2_labels.append(label)
+                    found = True
+                    break
+            if found:
+                break
+    
+    risk_lv3_labels = []
+    for lv3_val in (event.risk_taxonomy_lv3 or []):
+        found = False
+        for items in RISK_TAXONOMY_LV3.values():
+            for k, label in items:
+                if k == lv3_val:
+                    risk_lv3_labels.append(label)
+                    found = True
+                    break
+            if found:
+                break
+    
+    # Impacted lines (con protección contra None)
+    impact_lobs_display = [dict(LINE_OF_BUSINESS_CHOICES).get(v, v) for v in (event.impacted_lines or [])]
+    
+    # Sources count
+    try:
+        bundle_count = Source.objects.filter(event=event, is_active=True).count()
+    except:
+        bundle_count = 0
+    
+    context = {
+        'event': event,
+        'risk_lv1_labels': risk_lv1_labels,
+        'risk_lv2_labels': risk_lv2_labels,
+        'risk_lv3_labels': risk_lv3_labels,
+        'impact_lobs_display': impact_lobs_display,
+        'bundle_count': bundle_count,
+        'user': request.user,
+    }
+    
+    html = render_to_string(
+        'tracker/offcanvas/event_detail_offcanvas.html',
+        context,
+        request=request
+    )
+    
+    return JsonResponse({
+        'success': True,
+        'html': html,
+        'title': f'Event: {event.name}'  # ✅ Texto plano sin HTML
+    })
+    
+# ===========================
+#   ADD SOURCE GLOBAL — OFFCANVAS
+# ===========================
+
+@admin_required
+def add_source_global_offcanvas(request, event_id=None):
+    """
+    Vista para cargar el formulario de Add Source en offcanvas
+    """
+    preselect_event = None
+    events = Event.objects.filter(is_active=True).select_related('theme').order_by('name')
+    
+    # Si viene con event_id en la URL, preseleccionar ese evento
+    if event_id:
+        try:
+            event = get_object_or_404(Event, pk=event_id, is_active=True)
+            preselect_event = event.id
+            # También podemos filtrar para mostrar solo ese evento si quieres
+            # events = [event]  # Descomenta si quieres mostrar solo ese evento
+        except Event.DoesNotExist:
+            pass
+    
+    html = render_to_string(
+        "tracker/offcanvas/add_source_offcanvas.html",
+        {
+            "events": events,
+            "preselect_event": preselect_event,  # Pasar el ID del evento a preseleccionar
+        },
+        request=request
+    )
+    
+    return JsonResponse({
+        "success": True,
+        "html": html,
+        "title": '<i class="fas fa-plus-circle me-2"></i>Add Source'
+    })
+
+@admin_required
+@transaction.atomic
+def add_source_global_offcanvas_submit(request):
+    """
+    Procesar el formulario de Add Source desde offcanvas
+    """
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "Invalid method"})
+    
+    try:
+        # Usar la misma lógica que tu función add_source pero adaptada
+        # Primero, obtener el evento
+        event_id = request.POST.get('event')
+        if not event_id:
+            return JsonResponse({
+                "success": False,
+                "errors": {"event": ["Please select an event"]}
+            })
+        
+        # Obtener evento
+        event = get_object_or_404(Event, pk=event_id)
+        
+        # Usar el batch_id para archivos temporales
+        upload_batch = request.POST.get("upload_batch") or str(uuid.uuid4())
+        
+        # Manejar archivos temporales
+        drop_ids = [int(x) for x in request.POST.getlist("drop_temp_ids") if str(x).isdigit()]
+        if drop_ids:
+            _clear_staged(upload_batch, only_ids=drop_ids)
+        
+        _stage_incoming_files(request, upload_batch, request.user)
+        
+        # Crear formulario
+        form = SourceForm(request.POST, request.FILES, initial={"event": event})
+        
+        # Validar links extras
+        extra_links = [v.strip() for v in request.POST.getlist("extra_links") if v and v.strip()]
+        bad_links = [l for l in extra_links if not _valid_link(l)]
+        if bad_links:
+            form.add_error("link_or_file", "One or more additional links are invalid. Use http(s):// or mailto:.")
+        
+        # Obtener archivos temporales
+        staged_main, staged_extras = _get_staged(upload_batch)
+        
+        if form.is_valid():
+            selected_event = form.cleaned_data.get("event") or event
+            
+            summary = (form.cleaned_data.get("summary") or "").strip()
+            if summary and Source.objects.filter(event=selected_event, summary__iexact=summary).exists():
+                form.add_error("summary", "Summary must be different from existing ones for this event.")
+            else:
+                leader: Source = form.save(commit=False)
+                leader.event = selected_event
+                leader.created_by = request.user
+                
+                # Adjuntar archivo temporal principal
+                if not leader.file_upload and staged_main:
+                    leader.file_upload.save(staged_main.original_name, staged_main.file.file, save=False)
+                
+                # Verificar que haya al menos un archivo o link
+                has_any = bool(leader.file_upload or leader.link_or_file or staged_extras or extra_links)
+                if not has_any:
+                    form.add_error(None, "Please add at least one link or file before saving.")
+                else:
+                    leader.source_type = "FILE" if leader.file_upload else "LINK"
+                    leader.save()
+                    form.save_m2m()
+                    
+                    # Crear links extras
+                    for l in extra_links:
+                        Source.objects.create(
+                            event=leader.event,
+                            name=leader.name,
+                            source_date=leader.source_date,
+                            summary=leader.summary,
+                            potential_impact=leader.potential_impact,
+                            potential_impact_notes=leader.potential_impact_notes,
+                            link_or_file=l,
+                            created_by=request.user,
+                            source_type="LINK",
+                        )
+                    
+                    # Crear archivos extras
+                    for tu in staged_extras:
+                        sib = Source(
+                            event=leader.event,
+                            name=leader.name,
+                            source_date=leader.source_date,
+                            summary=leader.summary,
+                            potential_impact=leader.potential_impact,
+                            potential_impact_notes=leader.potential_impact_notes,
+                            created_by=request.user,
+                            source_type="FILE",
+                        )
+                        sib.file_upload.save(tu.original_name, tu.file.file, save=False)
+                        sib.save()
+                    
+                    _clear_staged(upload_batch)
+                    
+                    # ========== PARTE CRÍTICA AGREGADA: ==========
+                    # SI ES PETICIÓN AJAX (offcanvas)
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({
+                            'success': True,
+                            'source_id': leader.id,  # <- ID del source creado
+                            'event_id': leader.event.id,  # <- ID del evento
+                            'redirect_url': reverse('source_detail', kwargs={'pk': leader.id}),
+                            'message': "Source created successfully!"
+                        })
+                    # ==============================================
+                    
+                    # Si no es AJAX, comportamiento normal
+                    return JsonResponse({
+                        "success": True,
+                        "message": "Source created successfully!",
+                        "redirect_url": reverse("view_event", kwargs={"event_id": leader.event_id})
+                    })
+        
+        # Si hay errores en el formulario
+        existing_summaries = list(Source.objects.filter(event=event).values_list("summary", flat=True))
+        
+        return JsonResponse({
+            "success": False,
+            "errors": form.errors.get_json_data() if form.errors else {}
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in add_source_global_offcanvas_submit: {e}", exc_info=True)
+        return JsonResponse({
+            "success": False,
+            "message": f"An error occurred: {str(e)}"
+        })

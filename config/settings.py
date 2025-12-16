@@ -118,6 +118,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                "tracker.context_processors.navbar_categories",
+                "tracker.context_processors.global_ui",
             ],
         },
     },
@@ -144,28 +146,36 @@ DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 #    }
 #}
 
-if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=True, 
-        )
+# if DATABASE_URL:
+#     DATABASES = {
+#         "default": dj_database_url.parse(
+#             DATABASE_URL,
+#             conn_max_age=600,
+#             ssl_require=True, 
+#         )
+#     }
+# else:
+#     DATABASES = {
+#         "default": {
+#         'ENGINE': 'mssql',
+#         'NAME': 'Emerging Risk',
+#         'USER': 'django',
+#         'PASSWORD': 'django',
+#         'HOST': '10.20.68.38',
+#         'PORT': '1490',
+#         'OPTIONS': {
+#         'driver': 'ODBC Driver 18 for SQL Server',
+#         }
+#         }
+#     }
+
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        "default": {
-            'ENGINE': 'mssql',
-        'NAME': 'Emerging Risk',
-        'USER': 'django',
-        'PASSWORD': 'django',
-        'HOST': '10.141.68.153',
-       'PORT': '1490',
-       'OPTIONS': {
-           'driver': 'ODBC Driver 17 for SQL Server',
-            }
-        }
-    }
+}
 
 # =========================
 # Password validation
@@ -202,8 +212,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # =========================
 # Auth redirects
 # =========================
-LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
 # =========================
@@ -256,25 +266,40 @@ ALLOWED_HOSTS = ['*']
 #else:
 #    f = open(LOG_PATH,"w").close() #clear log file
 
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'handlers': {
+#         'file': {
+#             'level': 'DEBUG',
+#             'class': 'logging.FileHandler',
+#             # 'filename': 'C:/Windows/Temp/emerging_risk_debug.log',
+#         },
+#     },
+#     'loggers': {
+#         'django': {
+#             'handlers': ['file'],
+#             'level': 'DEBUG',
+#             'propagate': True,
+#         },
+#     },
+# }
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'C:/Windows/Temp/emerging_risk_debug.log',
+        'console': {
+            'class': 'logging.StreamHandler',
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
     },
 }
- 
+
+LOGIN_URL = '/login/'
+
 
 # STATIC_URL = '/static/'
 

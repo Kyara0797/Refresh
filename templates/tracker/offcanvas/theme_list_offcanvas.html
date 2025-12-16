@@ -1,0 +1,240 @@
+{% load static %}
+
+<div class="offcanvas offcanvas-end border-start"
+     data-bs-scroll="true"
+     data-bs-backdrop="true"
+     tabindex="-1"
+     id="offcanvasThemes"
+     style="width: 900px;">
+
+    <!-- ================= HEADER ================= -->
+    <div class="offcanvas-header border-bottom bg-white">
+        <div>
+            <h5 class="offcanvas-title fw-bold text-dark">
+                <i class="fas fa-list-ul me-2 text-orange"></i>
+                All Threats
+            </h5>
+            <p class="small text-muted mb-0">
+                Showing {{ themes|length }} threat{% if themes|length != 1 %}s{% endif %}
+                {% if show_archived %}(including archived){% endif %}
+            </p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <!-- ================= BODY ================= -->
+    <div class="offcanvas-body p-0">
+
+        <!-- ===== TOOLBAR ===== -->
+        <div class="border-bottom bg-white p-3">
+            <div class="d-flex justify-content-between align-items-center">
+
+                <div class="d-flex align-items-center gap-3">
+
+                    <!-- SEARCH -->
+                    <div class="input-group input-group-sm" style="width: 260px;">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control"
+                               id="searchThemesInput"
+                               placeholder="Search threats..."
+                               value="{{ search_query|default:'' }}"
+                               onkeyup="debouncedThemeSearch()">
+                        {% if search_query %}
+                        <button class="btn btn-outline-secondary"
+                                onclick="clearThemeSearch()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- TOGGLE ARCHIVED -->
+                    <div class="form-check form-switch">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="toggleArchivedThemes"
+                               {% if show_archived %}checked{% endif %}
+                               onchange="reloadThemeListOffcanvas()">
+                        <label class="form-check-label small text-muted">
+                            Show Archived
+                        </label>
+                    </div>
+                </div>
+
+                {% if is_admin %}
+                <button class="btn btn-orange btn-sm"
+                        onclick="loadOffcanvas('{% url 'add_theme_offcanvas' %}')">
+                    <i class="fas fa-plus me-1"></i> Add Threat
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ===== TABLE ===== -->
+        <div class="table-responsive"
+             style="max-height: calc(100vh - 180px); overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Onset</th>
+                        <th>Risk</th>
+                        <th>Status</th>
+                        <th>Events</th>
+                        {% if is_admin %}
+                        <th class="text-center" style="width: 60px;">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for theme in themes %}
+                    <tr class="{% if not theme.is_active %}text-muted bg-light{% endif %}">
+
+                        <!-- NAME -->
+                        <td>
+                            <button class="btn btn-link p-0 text-start text-decoration-none
+                                           {% if not theme.is_active %}text-muted{% else %}text-dark{% endif %}"
+                                    onclick="openThemeDetailOffcanvas({{ theme.id }})">
+                                {% if not theme.is_active %}
+                                    <i class="fas fa-archive me-1 text-muted"></i>
+                                {% endif %}
+                                {{ theme.name }}
+                            </button>
+                        </td>
+
+                        <!-- CATEGORY -->
+                        <td>
+                            <span class="badge bg-secondary">
+                                {{ theme.category.name }}
+                            </span>
+                        </td>
+
+                        <!-- ONSET -->
+                        <td>{{ theme.get_onset_timeline_display }}</td>
+
+                        <!-- RISK -->
+                        <td>
+                            <span class="badge bg-{{ theme.get_risk_color }}">
+                                {{ theme.get_risk_rating_display }}
+                            </span>
+                        </td>
+
+                        <!-- STATUS -->
+                        <td>
+                            {% if theme.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Archived</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- EVENTS -->
+                        <td>
+                            <span class="badge bg-info">
+                                {{ theme.active_event_count }}/{{ theme.total_event_count }}
+                            </span>
+                        </td>
+
+                        <!-- ACTIONS -->
+                        {% if is_admin %}
+                        <td class="text-center">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-link text-muted"
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+
+                                <ul class="dropdown-menu dropdown-menu-end shadow">
+
+                                    <!-- DETAILS -->
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="openThemeDetailOffcanvas({{ theme.id }})">
+                                            <i class="fas fa-eye me-2 text-orange"></i> Details
+                                        </button>
+                                    </li>
+
+                                    <!-- EDIT -->
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="openEditThemeOffcanvas({{ theme.id }})">
+                                            <i class="fas fa-pen me-2 text-orange"></i> Edit
+                                        </button>
+                                    </li>
+
+                                    <!-- ADD EVENT -->
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="openAddEventOffcanvas({{ theme.id }})">
+                                            <i class="fas fa-plus me-2 text-orange"></i> Add Event
+                                        </button>
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    <!-- ARCHIVE / RESTORE -->
+                                    <li>
+                                        <form method="post"
+                                              action="{% url 'toggle_theme_active' pk=theme.id %}">
+                                            {% csrf_token %}
+                                            <button class="dropdown-item
+                                                {% if theme.is_active %}text-danger{% else %}text-success{% endif %}">
+                                                <i class="fas
+                                                   {% if theme.is_active %}fa-archive{% else %}fa-rotate-left{% endif %}
+                                                   me-2"></i>
+                                                {% if theme.is_active %}Archive{% else %}Restore{% endif %}
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-2x mb-3"></i><br>
+                            No threats found.
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ================= SCRIPTS ================= -->
+<script>
+let themeSearchTimer;
+
+function debouncedThemeSearch() {
+    clearTimeout(themeSearchTimer);
+    themeSearchTimer = setTimeout(reloadThemeListOffcanvas, 600);
+}
+
+function clearThemeSearch() {
+    document.getElementById("searchThemesInput").value = "";
+    reloadThemeListOffcanvas();
+}
+
+function reloadThemeListOffcanvas() {
+    const q = document.getElementById("searchThemesInput").value.trim();
+    const archived = document.getElementById("toggleArchivedThemes").checked;
+
+    let params = [];
+    if (q) params.push("q=" + encodeURIComponent(q));
+    if (archived) params.push("show_archived=1");
+
+    const url = "{% url 'theme_list_offcanvas' %}" +
+                (params.length ? "?" + params.join("&") : "");
+
+    loadOffcanvas(url);
+}
+</script>

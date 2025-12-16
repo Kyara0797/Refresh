@@ -1,0 +1,124 @@
+<!-- ========================= -->
+<!-- THREATS LIST PARTIAL     -->
+<!-- ========================= -->
+
+<div class="table-responsive px-3 pb-3">
+  <table class="table table-hover align-middle mb-0" id="themesTable">
+    <thead class="table-light">
+      <tr>
+        <th style="width:80px;">Events</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Onset</th>
+        <th>Risk</th>
+        <th>Status</th>
+        <th class="no-sort text-center" style="width:40px;"></th> <!-- 3 dots -->
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for theme in themes %}
+      <tr class="theme-item {% if not theme.is_active %}table-light text-muted{% endif %}"
+          data-href="{% url 'view_theme' pk=theme.id %}">
+        
+        <!-- Events count -->
+        <td><small>{{ theme.events.count }}</small></td>
+
+        <!-- Name -->
+        <td>
+          <a class="text-decoration-none fw-semibold"
+             href="{% url 'view_theme' pk=theme.id %}">
+            {{ theme.name }}
+          </a>
+        </td>
+
+        <!-- Category -->
+        <td>{{ theme.category.name }}</td>
+
+        <!-- Onset -->
+        <td>{{ theme.get_onset_timeline_display }}</td>
+
+        <!-- Risk badge -->
+        <td>
+          <span class="badge bg-{{ theme.get_risk_color }}">
+            {{ theme.get_risk_rating_display }}
+          </span>
+        </td>
+
+        <!-- Status -->
+        <td>
+          {% if theme.is_active %}
+            <span class="badge bg-success">Active</span>
+          {% else %}
+            <span class="badge bg-secondary">Archived</span>
+          {% endif %}
+        </td>
+
+        <!-- ACTIONS DROPDOWN -->
+        <td class="text-center">
+          <div class="dropdown">
+            <button class="btn btn-link btn-sm text-muted p-0"
+                    data-bs-toggle="dropdown">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+
+              <li>
+                <button class="dropdown-item"
+                        onclick="loadOffcanvas('{% url 'add_event_offcanvas' %}?theme={{ theme.id }}','Add Event')">
+                  <i class="fas fa-plus me-2 text-orange"></i>Add Event
+                </button>
+              </li>
+
+              <li>
+                <a class="dropdown-item"
+                   href="{% url 'view_theme' pk=theme.id %}">
+                  <i class="fas fa-eye me-2 text-orange"></i>Details
+                </a>
+              </li>
+
+              <li>
+                <button class="dropdown-item"
+                        onclick="loadOffcanvas('{% url 'edit_theme_offcanvas' theme.id %}','Edit Threat')">
+                  <i class="fas fa-pen me-2 text-orange"></i>Edit
+                </button>
+              </li>
+
+              <li><hr class="dropdown-divider"></li>
+
+              <li>
+                <form method="post" action="{% url 'toggle_theme_active' pk=theme.id %}">
+                  {% csrf_token %}
+                  {% if theme.is_active %}
+                    <button type="submit" class="dropdown-item text-danger">
+                      <i class="fas fa-box-archive me-2"></i>Archive
+                    </button>
+                  {% else %}
+                    <button type="submit" class="dropdown-item text-success">
+                      <i class="fas fa-rotate-left me-2"></i>Restore
+                    </button>
+                  {% endif %}
+                </form>
+              </li>
+
+            </ul>
+          </div>
+        </td>
+      </tr>
+
+      {% empty %}
+      <tr><td colspan="7" class="text-center py-4">No threats found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .btn-square{
+    width:34px;height:34px;padding:0;
+    display:flex;justify-content:center;align-items:center;
+    border-radius:.5rem;
+  }
+  #themesTable th.no-sort { pointer-events:none; }
+</style>

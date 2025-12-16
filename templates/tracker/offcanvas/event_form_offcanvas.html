@@ -1,0 +1,216 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasEvent" aria-labelledby="offcanvasEventLabel">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasEventLabel">
+            {% if creating %}
+                <i class="fas fa-plus-circle me-2 text-orange"></i>Add Event
+            {% else %}
+                <i class="fas fa-edit me-2 text-orange"></i>Edit Event
+            {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <form id="eventForm" method="post" action="{% if creating %}{% url 'add_event' %}{% else %}{% url 'edit_event' pk=event.pk %}{% endif %}">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <!-- ===================== ACCORDION ===================== -->
+            <div class="accordion" id="eventAccordion">
+
+                <!-- BASIC INFORMATION -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="basicInfoHeader">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#basicInfoSection">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </button>
+                    </h2>
+
+                    <div id="basicInfoSection" class="accordion-collapse collapse show"
+                         data-bs-parent="#eventAccordion">
+                        <div class="accordion-body">
+
+                            <!-- THEME -->
+                            <div class="mb-3">
+                                <label class="form-label">Threat</label>
+                                {{ form.theme }}
+                                {% if form.theme.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.theme.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- NAME -->
+                            <div class="mb-3">
+                                <label class="form-label">Name</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.name.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- DATE IDENTIFIED -->
+                            <div class="mb-3">
+                                <label class="form-label">Date Identified</label>
+                                {{ form.date_identified }}
+                                {% if form.date_identified.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.date_identified.errors|join:", " }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLASSIFICATION -->
+                <!-- ================= CLASSIFICATION ================= -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#sectionClassification">
+                            <i class="fas fa-tags me-2"></i>Classification
+                        </button>
+                    </h2>
+
+                    <div id="sectionClassification" class="accordion-collapse collapse"
+                        data-bs-parent="#themeAccordion">
+                        <div class="accordion-body">
+
+                            <!-- REAL SELECT HIDDEN -->
+                            <select name="risk_rating" id="theme-risk-select" class="d-none">
+                                {% for value,label,color in [
+                                    ('low','Low','risk-low'),
+                                    ('moderate','Moderate','risk-medium'),
+                                    ('high','High','risk-high'),
+                                    ('critical','Critical','risk-critical')
+                                ] %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+
+                            <!-- VISUAL CARDS -->
+                            <label class="form-label">Risk Rating <span class="text-danger">*</span></label>
+
+                            <div class="row g-2 mb-3" id="theme-risk-cards">
+                                {% for value,label,color in [
+                                    ('low','Low','risk-low'),
+                                    ('moderate','Moderate','risk-medium'),
+                                    ('high','High','risk-high'),
+                                    ('critical','Critical','risk-critical')
+                                ] %}
+                                    <div class="col-6 col-sm-3">
+                                        <button type="button" class="risk-card btn w-100"
+                                                data-value="{{ value }}">
+                                            <div class="risk-icon {{ color }}">
+                                                <i class="fas fa-circle"></i>
+                                            </div>
+                                            <div class="risk-label">{{ label }}</div>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div id="risk-rating-error" class="invalid-feedback d-none">
+                                Please select a risk rating.
+                            </div>
+
+                            <!-- ONSET TIMELINE -->
+                            <div class="mb-3">
+                                <label class="form-label">Onset Timeline <span class="text-danger">*</span></label>
+                                {{ form.onset_timeline|add_class:"form-select" }}
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- BUSINESS LINES -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="lobHeader">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#lobSection">
+                            <i class="fas fa-building me-2"></i>Business Lines
+                        </button>
+                    </h2>
+                    <div id="lobSection" class="accordion-collapse collapse" data-bs-parent="#eventAccordion">
+                        <div class="accordion-body">
+                            {{ form.impacted_lines }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RISK TAXONOMY -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="taxonomyHeader">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#taxonomySection">
+                            <i class="fas fa-sitemap me-2"></i>Risk Taxonomy
+                        </button>
+                    </h2>
+                    <div id="taxonomySection" class="accordion-collapse collapse"
+                         data-bs-parent="#eventAccordion">
+                        <div class="accordion-body">
+
+                            <div class="mb-3">
+                                <label class="form-label">Level 1</label>
+                                {{ form.risk_taxonomy_lv1 }}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Level 2</label>
+                                {{ form.risk_taxonomy_lv2 }}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Level 3</label>
+                                {{ form.risk_taxonomy_lv3 }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="descHeader">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#descSection">
+                            <i class="fas fa-align-left me-2"></i>Description
+                        </button>
+                    </h2>
+                    <div id="descSection" class="accordion-collapse collapse"
+                         data-bs-parent="#eventAccordion">
+                        <div class="accordion-body">
+                            {{ form.description }}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- SUBMIT -->
+            <div class="mt-4 d-flex justify-content-end">
+                <button type="submit" class="btn btn-orange px-4">
+                    <i class="fas fa-save me-2"></i>
+                    {% if creating %}Save Event{% else %}Update Event{% endif %}
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<style>
+    .text-orange { color: #f26522; }
+    .btn-orange {
+        background-color: #f26522;
+        color: white;
+        border: none;
+    }
+    .btn-orange:hover {
+        background-color: #d3541c;
+        color: white;
+    }
+</style>

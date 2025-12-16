@@ -6,139 +6,1585 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fiserv Threat Landscape</title>
 
-  <!-- Icons / Bootstrap -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
-
-  <!-- DataTables 1.11.5 (Bootstrap 5 skin) -->
-  <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-  <!-- DataTables Select 1.3.4 (compatible con 1.11.x) -->
-  <link href="https://cdn.datatables.net/select/1.3.4/css/select.bootstrap5.min.css" rel="stylesheet" />
+  <!-- BOOTSTRAP + ICONS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"/>
+  <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
-    .sidebar { min-height: 100vh; background-color: #f8f9fa; }
-    .main-content { padding: 20px; }
-    .nav-link.btn-link { text-align: left; }
-    .nav-link.active { font-weight: 600; }
-    .hover-shadow { transition: box-shadow .2s ease; }
-    .hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.1); }
-    .bg-orange,
-    .badge-orange {
-      background-color: #fd7e14 !important;
-      color: #fff !important;
+    :root {
+      --fiserv-orange: #ff6600;
+      --fiserv-orange-light: #fff1e8;
+      --fiserv-orange-dark: #cc5200;
+      --fiserv-blue: #0056b3;
+      --fiserv-gray-dark: #2c3e50;
+      --fiserv-gray-light: #f8f9fa;
+      --fiserv-gray-medium: #e9ecef;
+      --fiserv-success: #28a745;
+      --fiserv-warning: #ffc107;
+      --fiserv-danger: #dc3545;
+      --fiserv-info: #17a2b8;
+      
+      --bg-dark: #f8f9fa;
+      --bg-card: #ffffff;
+      --bg-header: #0f0f0f;
+      --text-light: #e6e6e6;
+      --text-muted: #6c757d;
+      --border-color: #dee2e6;
+      
+      --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+      --shadow-md: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+      
+      --border-radius-sm: 0.375rem;
+      --border-radius-md: 0.5rem;
+      --border-radius-lg: 0.75rem;
+      --border-radius-xl: 1rem;
+      
+      --transition-fast: 150ms ease-in-out;
+      --transition-base: 250ms ease-in-out;
+      --transition-slow: 350ms ease-in-out;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #333;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-weight: 400;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ===== TYPOGRAPHY ===== */
+    h1, h2, h3, h4, h5, h6 {
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 0.5rem;
+      color: var(--fiserv-gray-dark);
+    }
+
+    h1 { font-size: 2.5rem; }
+    h2 { font-size: 2rem; }
+    h3 { font-size: 1.75rem; }
+    h4 { font-size: 1.5rem; }
+    h5 { font-size: 1.25rem; }
+    h6 { font-size: 1rem; }
+
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--fiserv-gray-dark);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid var(--fiserv-gray-medium);
+    }
+
+    .text-orange { color: var(--fiserv-orange) !important; }
+    .text-blue { color: var(--fiserv-blue) !important; }
+    .text-success { color: var(--fiserv-success) !important; }
+    .text-warning { color: var(--fiserv-warning) !important; }
+    .text-danger { color: var(--fiserv-danger) !important; }
+    .text-info { color: var(--fiserv-info) !important; }
+
+    /* ===== NAVBAR ===== */
+    header.topbar {
+      background: linear-gradient(135deg, var(--bg-header) 0%, #1a1a1a 100%);
+      border-bottom: 3px solid var(--fiserv-orange);
+      padding: 0.8rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: var(--shadow-md);
+    }
+
+    .brand {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-light);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: color var(--transition-fast);
+    }
+
+    .brand:hover {
+      color: white;
+      text-decoration: none;
+    }
+
+    .brand span {
+      color: var(--fiserv-orange);
+      font-weight: 800;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: var(--fiserv-orange);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .user-avatar {
+      background: linear-gradient(135deg, var(--fiserv-orange), var(--fiserv-orange-dark));
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: transform var(--transition-base);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .user-avatar:hover {
+      transform: scale(1.05);
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      font-weight: 500;
+      border-radius: var(--border-radius-sm);
+      transition: all var(--transition-base);
+      padding: 0.5rem 1.25rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-sm {
+      padding: 0.375rem 0.875rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-lg {
+      padding: 0.75rem 1.5rem;
+      font-size: 1.1rem;
+    }
+
+    .btn-orange {
+      background: linear-gradient(135deg, var(--fiserv-orange), var(--fiserv-orange-dark));
+      border: none;
+      color: white;
+      box-shadow: 0 4px 6px rgba(255, 102, 0, 0.2);
+    }
+
+    .btn-orange:hover {
+      background: linear-gradient(135deg, var(--fiserv-orange-dark), #b34700);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(255, 102, 0, 0.3);
+    }
+
+    .btn-orange:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+    }
+
+    .btn-orange-outline {
+      background: transparent;
+      border: 2px solid var(--fiserv-orange);
+      color: var(--fiserv-orange);
+    }
+
+    .btn-orange-outline:hover {
+      background: var(--fiserv-orange);
+      border-color: var(--fiserv-orange);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(255, 102, 0, 0.2);
+    }
+
+    /* Botones de acción en tabla */
+    .btn-action {
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      border-radius: var(--border-radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .btn-action-view {
+      background: rgba(23, 162, 184, 0.1);
+      border: 1px solid rgba(23, 162, 184, 0.3);
+      color: var(--fiserv-info);
+    }
+
+    .btn-action-view:hover {
+      background: rgba(23, 162, 184, 0.2);
+      border-color: var(--fiserv-info);
+      color: var(--fiserv-info);
+    }
+
+    .btn-action-edit {
+      background: rgba(255, 193, 7, 0.1);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: var(--fiserv-warning);
+    }
+
+    .btn-action-edit:hover {
+      background: rgba(255, 193, 7, 0.2);
+      border-color: var(--fiserv-warning);
+      color: var(--fiserv-warning);
+    }
+
+    .btn-action-delete {
+      background: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      color: var(--fiserv-danger);
+    }
+
+    .btn-action-delete:hover {
+      background: rgba(220, 53, 69, 0.2);
+      border-color: var(--fiserv-danger);
+      color: var(--fiserv-danger);
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    main.container-fluid {
+      background: var(--bg-card);
+      border-radius: var(--border-radius-xl);
+      padding: 2.5rem;
+      margin: 2rem auto;
+      box-shadow: var(--shadow-lg);
+      flex: 1;
+      max-width: 98%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    main.container-fluid::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--fiserv-orange), var(--fiserv-blue));
+      border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+    }
+
+    /* ===== CARDS ===== */
+    .card {
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-lg);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+      background: white;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .card-orange {
+      border-left: 4px solid var(--fiserv-orange);
+    }
+
+    .card-header {
+      background: var(--fiserv-gray-light);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      color: var(--fiserv-gray-dark);
+      border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
+    }
+
+    .card-header-orange {
+      background: var(--fiserv-orange-light);
+      color: var(--fiserv-orange-dark);
+      border-bottom: 2px solid var(--fiserv-orange);
+    }
+
+    .card-body {
+      padding: 1.5rem;
+      background: white;
+    }
+
+    /* ===== TABLES ===== */
+    .table-container {
+      background: white;
+      border-radius: var(--border-radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+
+    .table-header {
+      background: var(--fiserv-gray-light);
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--fiserv-gray-dark);
+      margin: 0;
+    }
+
+    .table {
+      margin-bottom: 0;
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%;
+    }
+
+    .table thead th {
+      background: var(--fiserv-gray-light);
+      border-bottom: 2px solid var(--border-color);
+      color: var(--fiserv-gray-dark);
+      font-weight: 600;
+      padding: 1rem 0.75rem;
+      white-space: nowrap;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      vertical-align: middle;
+    }
+
+    .table thead th.actions-header {
+      text-align: center;
+      width: 150px;
+    }
+
+    .table tbody tr {
+      transition: background-color var(--transition-fast);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table tbody tr:hover {
+      background-color: rgba(255, 102, 0, 0.05);
+    }
+
+    .table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .table tbody td {
+      padding: 1rem 0.75rem;
+      vertical-align: middle;
+      border-top: 1px solid transparent;
+      font-size: 0.875rem;
+      color: var(--fiserv-gray-dark);
+    }
+
+    .table tbody td.actions-cell {
+      text-align: center;
+      width: 150px;
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+
+    /* ===== BADGES ===== */
+    .risk-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: var(--border-radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .risk-low {
+      background-color: rgba(40, 167, 69, 0.1);
+      color: var(--fiserv-success);
+      border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+
+    .risk-medium {
+      background-color: rgba(255, 193, 7, 0.1);
+      color: var(--fiserv-warning);
+      border: 1px solid rgba(255, 193, 7, 0.2);
+    }
+
+    .risk-high {
+      background-color: rgba(220, 53, 69, 0.1);
+      color: var(--fiserv-danger);
+      border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+
+    .risk-critical {
+      background-color: rgba(220, 53, 69, 0.2);
+      color: var(--fiserv-danger);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      font-weight: 700;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .status-active {
+      background-color: rgba(40, 167, 69, 0.1);
+      color: var(--fiserv-success);
+      border: 1px solid rgba(40, 167, 69, 0.3);
+    }
+
+    .status-inactive {
+      background-color: rgba(108, 117, 125, 0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(108, 117, 125, 0.3);
+    }
+
+    .table-actions {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* ===== DATA TABLES OVERRIDES ===== */
+    .dataTables_wrapper {
+      padding: 0;
+      margin: 0;
+    }
+
+    .dataTables_length,
+    .dataTables_filter {
+      padding: 1rem 1.5rem;
+      background: var(--fiserv-gray-light);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .dataTables_length select,
+    .dataTables_filter input {
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-sm);
+      padding: 0.375rem 0.75rem;
+      background: white;
+    }
+
+    .dataTables_info {
+      color: var(--text-muted);
+      padding: 1rem 1.5rem;
+      background: var(--fiserv-gray-light);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .dataTables_paginate {
+      padding: 1rem 1.5rem;
+      background: var(--fiserv-gray-light);
+      border-top: 1px solid var(--border-color);
+    }
+
+    .dataTables_paginate .paginate_button {
+      margin: 0 0.125rem;
+      border: 1px solid var(--border-color) !important;
+      border-radius: var(--border-radius-sm) !important;
+      padding: 0.375rem 0.75rem !important;
+      color: var(--fiserv-gray-dark) !important;
+      background: white !important;
+      transition: all var(--transition-fast) !important;
+    }
+
+    .dataTables_paginate .paginate_button:hover {
+      background: var(--fiserv-orange-light) !important;
+      border-color: var(--fiserv-orange) !important;
+      color: var(--fiserv-orange-dark) !important;
+    }
+
+    .dataTables_paginate .paginate_button.current {
+      background: var(--fiserv-orange) !important;
+      border-color: var(--fiserv-orange) !important;
+      color: white !important;
+    }
+
+    /* ===== DASHBOARD SECTIONS ===== */
+    .dashboard-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--fiserv-gray-medium);
+    }
+
+    .section-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--fiserv-gray-dark);
+    }
+
+    /* ===== MODALS ===== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1080;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--transition-base), visibility var(--transition-base);
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-side {
+      position: fixed;
+      top: 0;
+      right: -500px;
+      width: 480px;
+      max-width: 95vw;
+      height: 100vh;
+      background: white;
+      box-shadow: -5px 0 30px rgba(0, 0, 0, 0.3);
+      transition: right var(--transition-slow);
+      z-index: 1090;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-side.open {
+      right: 0;
+    }
+
+    .modal-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: white;
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--fiserv-gray-light);
+      flex-shrink: 0;
+    }
+
+    .modal-body {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      background: var(--bg-dark);
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: linear-gradient(135deg, var(--bg-header), #1a1a1a);
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 0.9rem;
+      padding: 1.5rem 0;
+      margin-top: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    footer a {
+      color: var(--fiserv-orange);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color var(--transition-fast);
+    }
+
+    footer a:hover {
+      color: white;
+      text-decoration: underline;
+    }
+
+    /* ===== UTILITY CLASSES ===== */
+    .shadow-orange {
+      box-shadow: 0 4px 20px rgba(255, 102, 0, 0.15);
+    }
+
+    .hover-lift {
+      transition: transform var(--transition-base);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-2px);
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--fiserv-orange);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--fiserv-orange-dark);
+    }
+
+    /* ===== ACCESSIBILITY ===== */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .focus-visible:focus {
+      outline: 2px solid var(--fiserv-orange);
+      outline-offset: 2px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      header.topbar {
+        padding: 0.8rem 1rem;
+      }
+      
+      main.container-fluid {
+        padding: 1.5rem;
+        margin: 1rem auto;
+        max-width: 100%;
+        border-radius: var(--border-radius-lg);
+      }
+      
+      .modal-side {
+        width: 100%;
+        max-width: 100vw;
+      }
+      
+      .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .table-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      
+      .btn-action {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
-  {% block head_extra %}{% endblock %}
 </head>
-<body>
-  {% with url_name=request.resolver_match.url_name %}
-  <div class="container-fluid">
-    <div class="row">
-      <!-- SIDEBAR -->
-      <div class="col-md-2 sidebar p-3">
-        <h4 class="mb-3">Fiserv Threat Landscape</h4>
-        <hr />
-        <ul class="nav flex-column">
 
-          <!-- Dashboard -->
-          <li class="nav-item">
-            <a class="nav-link {% if url_name == 'dashboard' %}active{% endif %}"
-               href="{% url 'dashboard' %}">
-              <i class="fas fa-gauge me-1"></i> Dashboard
+<body>
+  <header class="topbar">
+    <a href="{% url 'dashboard' %}" class="brand fade-in">
+      <div class="brand-logo">F</div>
+      <span>fiserv.</span> Threat Landscape
+    </a>
+
+    <div class="d-flex align-items-center">
+      {% if user.is_authenticated %}
+      <div class="dropdown">
+        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
+           id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar me-2">
+            {{ user.first_name|default:user.username|slice:":1"|upper }}
+          </div>
+          <span class="fw-semibold">{{ user.first_name|default:user.username }}</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg">
+          <li>
+            <a class="dropdown-item" href="#">
+              <i class="fas fa-user-circle me-2 icon-orange"></i>Profile
             </a>
           </li>
-
-          <!-- Solo admins (staff o superuser): crear Threat/Event/Source -->
-          {% if user.is_authenticated %}
-            {% if user.is_superuser or user.is_staff %}
-              <li class="nav-item">
-                <a class="nav-link {% if url_name == 'add_theme' %}active{% endif %}"
-                   href="{% url 'add_theme' %}">
-                  <i class="fas fa-plus-circle me-1"></i> Add Threat
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if url_name == 'add_event' or url_name == 'add_event_redirect' %}active{% endif %}"
-                   href="{% url 'add_event_redirect' %}">
-                  <i class="fas fa-plus-circle me-1"></i> Add Event
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link {% if url_name == 'add_source' or url_name == 'add_source_redirect' %}active{% endif %}"
-                   href="{% url 'add_source_redirect' %}">
-                  <i class="fas fa-plus-circle me-1"></i> Add Source
-                </a>
-              </li>
-            {% endif %}
+          {% if user.is_staff %}
+          <li>
+            <a class="dropdown-item" href="{% url 'admin:index' %}">
+              <i class="fas fa-cogs me-2 icon-orange"></i>Admin Panel
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <button class="dropdown-item" onclick="openRegisterModal()">
+              <i class="fas fa-user-plus me-2 icon-orange"></i>Register New User
+            </button>
+          </li>
           {% endif %}
-
-          <!-- Auth -->
-          <li class="nav-item mt-2">
-            {% if user.is_authenticated %}
-              {% if user.is_superuser %}
-                <a class="nav-link {% if url_name == 'register' %}active{% endif %}"
-                   href="{% url 'register' %}">
-                  <i class="fas fa-user-plus me-1"></i> Create User
-                </a>
-              {% endif %}
-
-              <form action="{% url 'logout' %}" method="post" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="nav-link btn btn-link" style="border:none; background:none; cursor:pointer;">
-                  <i class="fas fa-sign-out-alt me-1"></i> Logout
-                </button>
-              </form>
-            {% else %}
-              <a class="nav-link {% if url_name == 'login' %}active{% endif %}"
-                 href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}">
-                <i class="fas fa-sign-in-alt me-1"></i> Login
-              </a>
-              {# En Opción C no mostramos Register al público #}
-            {% endif %}
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <form method="post" action="{% url 'logout' %}" class="mb-0">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item text-danger">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+              </button>
+            </form>
           </li>
         </ul>
       </div>
+      {% else %}
+      <button class="btn btn-orange btn-sm" onclick="openLoginModal()">
+        <i class="fas fa-sign-in-alt me-1"></i> Login
+      </button>
+      {% endif %}
+    </div>
+  </header>
 
-      <!-- CONTENIDO -->
-      <div class="col-md-10 main-content">
-        {% if messages %}
-          {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3">
-              <div class="d-flex align-items-center">
-                <i class="fas
-                  {% if 'success' in message.tags %} fa-check-circle
-                  {% elif 'error' in message.tags %} fa-exclamation-circle
-                  {% elif 'warning' in message.tags %} fa-exclamation-triangle
-                  {% else %} fa-info-circle {% endif %} me-2"></i>
-                <span>{{ message }}</span>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            </div>
-          {% endfor %}
+  <!-- Django Messages -->
+  {% if messages %}
+  <div class="container-fluid mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm">
+        {% if message.tags == 'success' %}
+          <i class="fas fa-check-circle me-2 text-success"></i>
+        {% elif message.tags == 'error' %}
+          <i class="fas fa-exclamation-circle me-2 text-danger"></i>
+        {% elif message.tags == 'warning' %}
+          <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+        {% else %}
+          <i class="fas fa-info-circle me-2 text-info"></i>
         {% endif %}
+        <span>{{ message }}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
-        {% block content %}{% endblock %}
+  <!-- Main Content -->
+  <main class="container-fluid fade-in">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- GLOBAL OFFCANVAS -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="globalOffcanvas" style="width:540px;">
+      <div class="offcanvas-header border-bottom">
+          <h5 class="offcanvas-title fw-bold" id="globalOffcanvasTitle">Details</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+      </div>
+      <div class="offcanvas-body p-0" id="globalOffcanvasBody" style="overflow-y: auto;">
+          <!-- Content injected dynamically -->
+      </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="fade-in">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6 text-md-start mb-2 mb-md-0">
+          © {% now "Y" %} Fiserv Inc. — <a href="#">Threat Landscape Portal</a>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <small>Version 1.0.0 | Last updated: {% now "F j, Y" %}</small>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeAllModals()"></div>
+
+  <!-- Login Modal -->
+  <div class="modal-side" id="loginModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-sign-in-alt me-2"></i> Sign In
+        </h5>
+        <button type="button" class="btn-close" onclick="closeLoginModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="card">
+          <div class="card-header card-header-orange">
+            <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Secure Authentication</h6>
+          </div>
+          <div class="card-body">
+            <form method="post" action="{% url 'login' %}" id="loginForm">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+
+              <div class="mb-3">
+                <label for="id_username" class="form-label fw-semibold">
+                  Email or Username
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-user"></i></span>
+                  <input type="text"
+                         class="form-control"
+                         id="id_username"
+                         name="username"
+                         placeholder="Enter your username or email"
+                         required
+                         autofocus>
+                </div>
+              </div>
+
+              <div class="mb-4">
+                <label for="id_password_login" class="form-label fw-semibold">
+                  Password
+                </label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                  <input type="password"
+                         class="form-control"
+                         id="id_password_login"
+                         name="password"
+                         placeholder="Enter your password"
+                         required>
+                  <button class="btn btn-outline-secondary" type="button" 
+                          id="togglePwdLogin">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-orange btn-lg py-2" id="loginSubmitBtn">
+                  <i class="fas fa-right-to-bracket me-2"></i> Sign In
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  {% endwith %}
 
-  <!-- JS base -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Register Modal (Staff Only) -->
+  {% if user.is_authenticated and user.is_staff %}
+  <div class="modal-side" id="registerModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="fas fa-user-plus me-2"></i>Register New User
+        </h5>
+        <button type="button" class="btn-close" onclick="closeRegisterModal()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="card">
+          <div class="card-header card-header-orange">
+            <h6 class="mb-0"><i class="fas fa-user-plus me-2"></i>Create New User Account</h6>
+          </div>
+          <div class="card-body">
+            <form method="post" action="{% url 'register' %}" id="registerForm">
+              {% csrf_token %}
+              
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Username *</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-at"></i></span>
+                  <input type="text" 
+                         class="form-control" 
+                         name="username" 
+                         required
+                         placeholder="Enter username">
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Email *</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                  <input type="email" 
+                         class="form-control" 
+                         name="email" 
+                         required
+                         placeholder="user@example.com">
+                </div>
+              </div>
+              
+              <div class="mb-3">
+                <label class="form-label fw-semibold">Password *</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" 
+                         class="form-control" 
+                         name="password1" 
+                         required
+                         placeholder="Enter password"
+                         id="regPassword">
+                  <button class="btn btn-outline-secondary" type="button" 
+                          id="toggleRegPassword">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <label class="form-label fw-semibold">Confirm Password *</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-key"></i></span>
+                  <input type="password" 
+                         class="form-control" 
+                         name="password2" 
+                         required
+                         placeholder="Confirm password">
+                </div>
+              </div>
+              
+              <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-orange" id="registerSubmitBtn">
+                  <i class="fas fa-user-plus me-1"></i> Create User Account
+                </button>
+                <a href="{% url 'admin:auth_user_changelist' %}" class="btn btn-orange-outline">
+                  <i class="fas fa-users me-1"></i> Manage Existing Users
+                </a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
-  <!-- DataTables 1.11.5 -->
-  <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-  <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-  <!-- DataTables Select 1.3.4 -->
-  <script src="https://cdn.datatables.net/select/1.3.4/js/dataTables.select.min.js"></script>
-
-  <!-- Tooltips bootstrap global -->
+  <!-- JavaScript Libraries -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="{% static 'tracker/js/risk-cards.js' %}"></script>
+  
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-      tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el) })
+    // =============================================
+    // UNIVERSAL OFFCANVAS LOADER
+    // =============================================
+    function loadOffcanvas(url, title = 'Details') {
+        console.log('🔗 Loading offcanvas from:', url);
+        
+        const offcanvasEl = document.getElementById('globalOffcanvas');
+        const offcanvasBody = document.getElementById('globalOffcanvasBody');
+        const offcanvasTitle = document.getElementById('globalOffcanvasTitle');
+
+        if (!offcanvasEl || !offcanvasBody || !offcanvasTitle) {
+            console.error('❌ Offcanvas elements not found');
+            return;
+        }
+
+        // Show loader
+        offcanvasBody.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center" style="min-height:400px;">
+                <div class="spinner-border text-primary"></div>
+            </div>
+        `;
+        
+        offcanvasTitle.innerHTML = title;
+
+        let offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+        if (!offcanvas) {
+            offcanvas = new bootstrap.Offcanvas(offcanvasEl);
+        }
+        
+        offcanvas.show();
+
+        // Load content
+        fetch(url, { 
+            headers: { "X-Requested-With": "XMLHttpRequest" } 
+        })
+        .then(response => {
+            console.log('📥 Offcanvas response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📦 Offcanvas data received:', data.success);
+            
+            if (data.html) {
+                // Extraer y ejecutar scripts manualmente
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.html;
+                
+                // Extraer todos los <script> tags
+                const scripts = tempDiv.querySelectorAll('script');
+                const scriptContents = [];
+                
+                scripts.forEach(script => {
+                    if (script.textContent) {
+                        scriptContents.push(script.textContent);
+                    }
+                    script.remove(); // Remover del HTML
+                });
+                
+                // Inyectar HTML sin scripts
+                offcanvasBody.innerHTML = tempDiv.innerHTML;
+                console.log('✅ HTML injected into offcanvas');
+                
+                // EJECUTAR scripts extraídos
+                scriptContents.forEach((scriptText, index) => {
+                    try {
+                        console.log(`⚡ Executing script ${index + 1}/${scriptContents.length}`);
+                        eval(scriptText);
+                    } catch (err) {
+                        console.error(`❌ Error executing script ${index + 1}:`, err);
+                    }
+                });
+                
+                // Llamar initializeOffcanvasForms para Theme forms
+                setTimeout(() => {
+                    initializeOffcanvasForms();
+                }, 50);
+            }
+
+            if (data.title) {
+                offcanvasTitle.textContent = data.title;
+            }
+
+            console.log('✅ Offcanvas initialization complete');
+        })
+        .catch(error => {
+            console.error('❌ Error loading offcanvas:', error);
+            offcanvasBody.innerHTML = `
+                <div class="p-4 text-center">
+                    <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+                    <h5 class="text-danger">Error Loading Content</h5>
+                    <p class="text-muted">${error.message}</p>
+                </div>
+            `;
+        });
+    }
+
+    // =============================================
+    // FORM AUTO-INITIALIZATION (Para Theme forms)
+    // =============================================
+    function initializeOffcanvasForms() {
+        // Detect form type and initialize accordingly
+        if (document.getElementById("addThemeForm")) {
+            initAddThemeForm();
+        }
+        
+        if (document.getElementById("editThemeForm")) {
+          initEditThemeForm();
+        }
+
+        // Universal risk rating handler
+        initRiskRatingHandler(document.getElementById('globalOffcanvas'));
+    }
+
+    // =============================================
+    // RISK RATING HANDLER (UNIVERSAL)
+    // =============================================
+    function initRiskRatingHandler(container) {
+        if (!container) return;
+
+        const riskCards = container.querySelectorAll('.risk-card-option, .risk-item');
+        const riskInput = container.querySelector('#id_risk_rating, #edit_risk_rating_input, #risk_rating');
+
+        if (!riskCards.length || !riskInput) return;
+
+        riskCards.forEach(card => {
+            card.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                riskCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                // Detect if it's for Theme (lowercase) or Event (uppercase)
+                const isEvent = this.closest('#addEventFormOffcanvas') || this.closest('#addEventForm') || this.closest('#editEventForm');
+                const value = this.dataset.value;
+                
+                riskInput.value = isEvent ? value.toUpperCase() : value.toLowerCase();
+                
+                console.log('Risk selected:', riskInput.value);
+            });
+        });
+    }
+
+    // =============================================
+    // ADD THEME FORM
+    // =============================================
+    window.initAddThemeForm = function() {
+        const form = document.getElementById("addThemeForm");
+        if (!form) return;
+
+        console.log("✅ Initializing Add Theme Form");
+
+        const clearBtn = form.querySelector("#clearFormBtn");
+        if (clearBtn) {
+            clearBtn.addEventListener("click", function() {
+                form.reset();
+                form.querySelectorAll('.risk-card-option').forEach(c => c.classList.remove('selected'));
+                form.querySelector('#id_risk_rating').value = "";
+                form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            });
+        }
+
+        form.addEventListener("submit", function(e) {
+            e.preventDefault();
+            
+            let isValid = true;
+            
+            const category = form.querySelector('#categorySelect');
+            if (category && !category.value) {
+                category.classList.add('is-invalid');
+                isValid = false;
+            } else if (category) {
+                category.classList.remove('is-invalid');
+            }
+            
+            const name = form.querySelector('#nameInput');
+            if (name && (!name.value || name.value.trim().length < 3)) {
+                name.classList.add('is-invalid');
+                isValid = false;
+            } else if (name) {
+                name.classList.remove('is-invalid');
+            }
+            
+            const riskInput = form.querySelector('#id_risk_rating');
+            if (!riskInput || !riskInput.value) {
+                isValid = false;
+            }
+            
+            const onset = form.querySelector('#onsetTimelineSelect');
+            if (onset && !onset.value) {
+                onset.classList.add('is-invalid');
+                isValid = false;
+            } else if (onset) {
+                onset.classList.remove('is-invalid');
+            }
+            
+            if (!isValid) {
+                return;
+            }
+            
+            const formData = new FormData(form);
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            }
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const offcanvas = bootstrap.Offcanvas.getInstance(
+                        document.getElementById('globalOffcanvas')
+                    );
+                    if (offcanvas) {
+                        offcanvas.hide();
+                    }
+                    
+                    if (typeof loadThemesTable === 'function') {
+                        setTimeout(loadThemesTable, 200);
+                    }
+                    
+                    if (data.theme_id && typeof openThemeDetailOffcanvas === 'function') {
+                        setTimeout(() => {
+                            openThemeDetailOffcanvas(data.theme_id);
+                        }, 350);
+                    }
+                } else {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save Threat';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save me-1"></i> Save Threat';
+                }
+            });
+        });
+    };
+
+    // =============================================
+    // EDIT THEME FORM
+    // =============================================
+    window.initEditThemeForm = function () {
+        const form = document.getElementById("editThemeForm");
+        if (!form) return;
+
+        console.log("✅ Edit Theme Form initialized");
+
+        // Evitar doble binding
+        if (form.dataset.bound === "true") return;
+        form.dataset.bound = "true";
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const risk = form.querySelector("#id_risk_rating");
+            const riskError = document.getElementById("editRiskRatingError");
+
+            if (riskError) riskError.classList.add("d-none");
+
+            if (!risk || !risk.value) {
+                if (riskError) riskError.classList.remove("d-none");
+                return;
+            }
+
+            fetch(form.action, {
+                method: "POST",
+                body: new FormData(form),
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert("Error saving threat.");
+                    return;
+                }
+
+                // 1️⃣ cerrar offcanvas
+                const offcanvas = bootstrap.Offcanvas.getInstance(
+                    document.getElementById("globalOffcanvas")
+                );
+                if (offcanvas) offcanvas.hide();
+
+                // 2️⃣ refrescar tabla
+                if (typeof loadThemesTable === "function") {
+                    setTimeout(loadThemesTable, 200);
+                }
+
+                // 3️⃣ abrir detalle actualizado
+                if (data.theme_id && typeof openThemeDetailOffcanvas === "function") {
+                    setTimeout(() => {
+                        openThemeDetailOffcanvas(data.theme_id);
+                    }, 300);
+                }
+            })
+            .catch(err => {
+                console.error("Save failed:", err);
+                alert("Unexpected error saving threat.");
+            });
+        });
+    };
+
+    // =============================================
+    // OFFCANVAS OPENERS (SIN DUPLICADOS)
+    // =============================================
+    window.openAddThemeOffcanvas = function() {
+        loadOffcanvas('/themes/add/offcanvas/', '<i class="fas fa-plus-circle me-2"></i>Add New Threat');
+    };
+
+    window.openAddSourceGlobalOffcanvas = function() {
+        console.log('🎯 Loading Add Source Global Offcanvas');
+        loadOffcanvas('/source/add/global/offcanvas/', '<i class="fas fa-plus-circle me-2"></i>Add Source');
+    };
+
+    window.openEditThemeOffcanvas = function(themeId) {
+        loadOffcanvas(`/themes/${themeId}/edit/offcanvas/`, '<i class="fas fa-edit me-2"></i>Edit Threat');
+    };
+
+    window.openAddEventOffcanvas = function(themeId) {
+        const url = themeId 
+            ? `/event/add/offcanvas/?theme_id=${themeId}` 
+            : '/event/add/offcanvas/';
+        
+        console.log('🎯 Opening Add Event offcanvas with URL:', url);
+        loadOffcanvas(url, '<i class="fas fa-plus-circle me-2"></i>Add New Event');
+    };
+
+    window.openThemeDetailOffcanvas = function(themeId) {
+        console.log("📖 Opening theme detail for ID:", themeId);
+        loadOffcanvas(`/theme/${themeId}/offcanvas/`, '<i class="fas fa-info-circle me-2"></i>Threat Details');
+    };
+
+    window.openEventDetailOffcanvas = function(eventId) {
+        console.log("Opening event detail for ID:", eventId);
+        loadOffcanvas(`/event/${eventId}/offcanvas/`, '<i class="fas fa-calendar-alt me-2"></i>Event Details');
+    };
+
+    // =============================================
+    // MODAL MANAGEMENT
+    // =============================================
+    function openLoginModal() {
+        document.getElementById('loginModal').classList.add('open');
+        document.getElementById('modalOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+        
+        setTimeout(() => {
+            const usernameField = document.getElementById('id_username');
+            if (usernameField) usernameField.focus();
+        }, 300);
+    }
+
+    function closeLoginModal() {
+        document.getElementById('loginModal').classList.remove('open');
+        document.getElementById('modalOverlay').classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    function openRegisterModal() {
+        document.getElementById('registerModal').classList.add('open');
+        document.getElementById('modalOverlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeRegisterModal() {
+        document.getElementById('registerModal').classList.remove('open');
+        document.getElementById('modalOverlay').classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    function closeAllModals() {
+        closeLoginModal();
+        closeRegisterModal();
+    }
+
+    // =============================================
+    // INITIALIZATION
+    // =============================================
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('🚀 Base.html initialized');
+        
+        // Password toggle functionality
+        const toggleLoginPwd = document.getElementById('togglePwdLogin');
+        if (toggleLoginPwd) {
+            toggleLoginPwd.addEventListener('click', function() {
+                const passwordInput = document.getElementById('id_password_login');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.replace('fa-eye', 'fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.replace('fa-eye-slash', 'fa-eye');
+                }
+            });
+        }
+
+        const toggleRegPwd = document.getElementById('toggleRegPassword');
+        if (toggleRegPwd) {
+            toggleRegPwd.addEventListener('click', function() {
+                const passwordInput = document.getElementById('regPassword');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.classList.replace('fa-eye', 'fa-eye-slash');
+                } else {
+                    passwordInput.type = 'password';
+                    icon.classList.replace('fa-eye-slash', 'fa-eye');
+                }
+            });
+        }
+
+        // ESC key to close modals
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAllModals();
+            }
+        });
+
+        // Auto-close alerts
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Tooltips
+        const tooltipTriggerList = [].slice.call(
+            document.querySelectorAll('[title]')
+        );
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Delete confirmation
+        document.querySelectorAll('.btn-action-delete').forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (!confirm('Are you sure you want to delete this item?')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        });
     });
+
+
+    // =============================================
+    // ADD SOURCE OFFCANVAS FUNCTIONS
+    // =============================================
+
+    // Función específica para Add Source (para botones en event_detail)
+    function openAddSourceOffcanvas(url) {
+        console.log('🎯 openAddSourceOffcanvas called with URL:', url);
+        
+        // Crear offcanvas dinámico
+        const offcanvasHTML = `
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="addSourceFormOffcanvas" 
+                style="width: 700px;">
+            <div class="offcanvas-header bg-light border-bottom">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                <h5 class="offcanvas-title fw-bold mb-0">
+                    <i class="fas fa-plus-circle me-2 text-primary"></i>Add Source
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+                </div>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div class="h-100 w-100 position-relative">
+                <iframe id="addSourceFrame" 
+                        src="${url}" 
+                        style="width: 100%; height: 100%; border: none;"
+                        onload="resizeSourceIframe(this)">
+                </iframe>
+                <div class="position-absolute top-0 end-0 p-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                            onclick="closeAddSourceOffcanvas()">
+                    <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                </div>
+            </div>
+            </div>
+        `;
+        
+        // Agregar al DOM
+        document.body.insertAdjacentHTML('beforeend', offcanvasHTML);
+        
+        // Mostrar offcanvas
+        const offcanvasElement = document.getElementById('addSourceFormOffcanvas');
+        const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
+        offcanvas.show();
+        
+        // Limpiar cuando se cierre
+        offcanvasElement.addEventListener('hidden.bs.offcanvas', function() {
+            setTimeout(() => {
+                if (document.body.contains(this)) {
+                    this.remove();
+                }
+            }, 300);
+        });
+    }
+
+    function resizeSourceIframe(iframe) {
+        try {
+            // Esperar a que el contenido cargue
+            setTimeout(() => {
+                if (iframe.contentWindow && iframe.contentWindow.document.body) {
+                    const height = iframe.contentWindow.document.body.scrollHeight;
+                    iframe.style.height = Math.max(height, 500) + 'px';
+                }
+            }, 100);
+        } catch (e) {
+            console.log('Error ajustando iframe:', e);
+        }
+    }
+
+    function closeAddSourceOffcanvas() {
+        const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('addSourceFormOffcanvas'));
+        if (offcanvas) offcanvas.hide();
+    }
+
+    // =============================================
+    // COMUNICACIÓN IFRAME-PADRE
+    // =============================================
+
+    // Escuchar mensajes desde iframes (para cerrar offcanvas)
+    window.addEventListener('message', function(event) {
+        if (event.data === 'closeOffcanvas' || event.data === 'sourceSaved') {
+            closeAddSourceOffcanvas();
+            // Recargar la página después de un momento
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+        
+        // Para datos más complejos
+        if (event.data && typeof event.data === 'object') {
+            if (event.data.type === 'closeOffcanvas') {
+                closeAddSourceOffcanvas();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+            
+            if (event.data.type === 'sourceSaved' && event.data.sourceId) {
+                closeAddSourceOffcanvas();
+                // Opcional: abrir el source detail en offcanvas
+                setTimeout(() => {
+                    if (typeof openSourceDetailOffcanvas === 'function') {
+                        openSourceDetailOffcanvas(event.data.sourceId);
+                    } else {
+                        window.location.reload();
+                    }
+                }, 300);
+            }
+        }
+    });
+
+    // =============================================
+    // AÑADIR AL OBJETO WINDOW (global)
+    // =============================================
+    window.openAddSourceOffcanvas = openAddSourceOffcanvas;
+    window.resizeSourceIframe = resizeSourceIframe;
+    window.closeAddSourceOffcanvas = closeAddSourceOffcanvas;
+    // Global functions
+    window.openLoginModal = openLoginModal;
+    window.closeLoginModal = closeLoginModal;
+    window.openRegisterModal = openRegisterModal;
+    window.closeRegisterModal = closeRegisterModal;
+    window.closeAllModals = closeAllModals;
+    window.loadOffcanvas = loadOffcanvas;
+    window.openAddSourceGlobalOffcanvas = openAddSourceGlobalOffcanvas;
   </script>
 
   {% block scripts %}{% endblock %}

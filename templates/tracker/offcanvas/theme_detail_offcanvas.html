@@ -1,0 +1,202 @@
+{% load static %}
+
+<!-- ===================== TITLE + ACTIONS ===================== -->
+<div class="d-flex justify-content-between align-items-start mb-3">
+
+    <!-- Theme name -->
+    <div>
+        <h4 class="fw-bold mb-0 d-flex align-items-center gap-2">
+            <i class="fas fa-shield-halved text-primary"></i>
+            {{ theme.name }}
+        </h4>
+        <small class="text-muted">Threat details overview</small>
+    </div>
+
+    <!-- Actions -->
+    {% if show_admin_actions %}
+    <div class="d-flex gap-2">
+
+        <!-- Edit -->
+        <button type="button"
+                class="action-icon-btn action-edit"
+                title="Edit Threat"
+                onclick="openEditThemeOffcanvas({{ theme.pk }})">
+            <i class="fas fa-pen"></i>
+        </button>
+
+        <!-- Add Event -->
+        <button type="button"
+                class="action-icon-btn action-add"
+                title="Add Event"
+                onclick="openAddEventOffcanvas({{ theme.id }})">
+            <i class="fas fa-plus"></i>
+        </button>
+
+        <!-- Archive -->
+        <form method="post"
+              action="{% url 'toggle_theme_active' pk=theme.pk %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="action-icon-btn action-archive"
+                    title="{{ theme.is_active|yesno:'Archive,Restore' }}"
+                    onclick="return confirm('{{ theme.is_active|yesno:"Archive this threat?,Restore this threat?" }}');">
+                <i class="fas fa-{{ theme.is_active|yesno:'archive,rotate-left' }}"></i>
+            </button>
+        </form>
+
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===================== SUMMARY CARDS ===================== -->
+<div class="row g-3 mb-4">
+
+    <!-- Category -->
+    <div class="col-6">
+        <div class="summary-card">
+            <small class="text-muted d-flex align-items-center gap-2">
+                <i class="fas fa-folder-open icon-category"></i> Category
+            </small>
+            <div class="fw-semibold">
+                {{ theme.category }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Rating -->
+    <div class="col-6">
+        <div class="summary-card">
+            <small class="text-muted d-flex align-items-center gap-2">
+                <i class="fas fa-exclamation-triangle icon-risk"></i> Risk Rating
+            </small>
+            <span class="badge bg-{{ theme.get_risk_color }} px-3 py-2">
+                {{ theme.get_risk_rating_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Onset Timeline -->
+    <div class="col-6">
+        <div class="summary-card">
+            <small class="text-muted d-flex align-items-center gap-2">
+                <i class="fas fa-clock icon-timeline"></i> Onset Timeline
+            </small>
+            <div class="fw-semibold">
+                {{ theme.get_onset_timeline_display|default:"Not specified" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Events -->
+    <div class="col-6">
+        <div class="summary-card">
+            <small class="text-muted d-flex align-items-center gap-2">
+                <i class="fas fa-calendar-alt icon-events"></i> Events
+            </small>
+            <div class="fw-semibold">
+                {{ theme.events.count }} total
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===================== RELATED EVENTS ===================== -->
+<h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+    <i class="fas fa-list"></i> Related Events
+</h6>
+
+{% if theme.events.count %}
+<div class="table-responsive" style="max-height: 260px; overflow-y:auto;">
+    <table class="table table-sm table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Name</th>
+                <th>Date</th>
+                <th>Risk</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for event in theme.events.all %}
+            <tr>
+                <td class="fw-semibold">{{ event.name }}</td>
+                <td>{{ event.date_identified|date:"m-d-Y" }}</td>
+                <td>
+                    <span class="badge bg-{{ event.get_risk_color }}">
+                        {{ event.get_risk_rating_display }}
+                    </span>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+<!-- EMPTY STATE -->
+<div class="alert alert-info d-flex justify-content-between align-items-center mt-3">
+    <div>
+        <i class="fas fa-info-circle me-1"></i>
+        No events added yet.
+    </div>
+
+    {% if show_admin_actions %}
+    <button class="btn btn-sm btn-primary"
+            onclick="openAddEventOffcanvas({{ theme.id }})">
+        <i class="fas fa-plus me-1"></i>Add Event
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ===================== STYLES ===================== -->
+<style>
+/* Action buttons */
+.action-icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.action-edit {
+    background: #ffc107;
+    color: #000;
+}
+
+.action-add {
+    background: #e7f1ff;
+    color: #0d6efd;
+    border: 1px solid #0d6efd;
+}
+
+.action-archive {
+    background: #fdeaea;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+}
+
+.action-icon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.15);
+}
+
+/* Summary cards */
+.summary-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+
+/* Icon colors */
+.icon-category { color: #0d6efd; }
+.icon-risk { color: #dc3545; }
+.icon-timeline { color: #0dcaf0; }
+.icon-events { color: #198754; }
+</style>

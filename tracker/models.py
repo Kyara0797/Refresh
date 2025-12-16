@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone 
 import uuid
 
-STATUS_CHOICES = [
+PHASE_STATUS_CHOICES= [
     ('HORIZON SCANNING', 'Horizon Scanning'),
     ('UNDER MONITORING', 'Under Monitoring'),
     ('TRANSITION TO KNOWN RISK', 'Transition to known risk'),
@@ -229,17 +229,18 @@ RISK_TAXONOMY_LV3 = {
 
 RISK_CHOICES = [
     ('low', 'Low'),
-    ('medium', 'Medium'),
+    ('moderate', 'Moderate'),
     ('high', 'High'),
     ('critical', 'Critical'),
 ]
 
 RISK_COLORS = {
     'low': 'success',
-    'medium': 'warning',
+    'moderate': 'warning',
     'high': 'orange',
     'critical': 'danger'
 }
+
 
 CATEGORY_CHOICES = [
     ('Political', 'Political'),
@@ -297,6 +298,8 @@ class Category(models.Model):
         return self.name
 
 class Theme(models.Model):
+    
+    
     is_active = models.BooleanField(default=True, db_index=True)
     category = models.ForeignKey(
         Category, 
@@ -324,10 +327,12 @@ class Theme(models.Model):
             models.Index(fields=['risk_rating']),
         ]
     
+    
     def get_risk_color(self):
-        key = (self.risk_rating or '').strip().upper()
-        return RISK_COLORS.get(self.risk_rating, 'secondary')
+        return RISK_COLORS.get(self.risk_rating, "secondary")
+    
 
+    
     def clean(self):
         if not self.name.strip():
             raise ValidationError("The name cannot be empty.")
@@ -344,6 +349,11 @@ class Theme(models.Model):
     def __str__(self):
         return f"{self.name} ({self.category})"
 
+    @property
+    def event_count(self):
+        """Retorna el número de eventos activos para este theme"""
+        return self.events.filter(is_active=True).count()
+    
 class Event(models.Model):
     is_active = models.BooleanField(default=True, db_index=True)
     
@@ -354,14 +364,15 @@ class Event(models.Model):
     
     # Choices para risk_rating
     RISK_RATING_CHOICES = [
-        ('LOW', 'Low'),
-        ('MEDIUM', 'Medium'),
-        ('HIGH', 'High'),
-        ('CRITICAL', 'Critical'),
-    ]
+        ('low', 'Low'),
+        ('moderate', 'Moderate'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]   
+
     
     # Choices para status (asumiendo que necesitas esta definición)
-    STATUS_CHOICES = sorted([
+    PHASE_STATUS_CHOICES = sorted([
         ('HORIZON SCANNING', 'Horizon Scanning'),
         ('UNDER MONITORING', 'Under monitoring'),
         ('TRANSITION TO KNOWN RISK', 'Transition to known risk'),
@@ -369,10 +380,10 @@ class Event(models.Model):
     
     # Diccionario de colores para risk_rating
     RISK_COLORS = {
-        'LOW': 'success',
-        'MEDIUM': 'warning',
-        'HIGH': 'orange',
-        'CRITICAL': 'danger',
+        'low': 'success',
+        'moderate': 'warning',
+        'high': 'orange',
+        'critical': 'danger',
     }
     
     # Campos del modelo
@@ -391,11 +402,12 @@ class Event(models.Model):
     risk_taxonomy_lv1 = models.JSONField(default=list)
     risk_taxonomy_lv2 = models.JSONField(default=list)
     risk_taxonomy_lv3 = models.JSONField(default=list)
-    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    status = models.CharField(max_length=50, choices=PHASE_STATUS_CHOICES)
     risk_rating = models.CharField(
         max_length=20, 
         choices=RISK_RATING_CHOICES,
-        default='MEDIUM' 
+        default='moderate'
+
     )
     control_in_place = models.BooleanField(default=False)
     created_by = models.ForeignKey(

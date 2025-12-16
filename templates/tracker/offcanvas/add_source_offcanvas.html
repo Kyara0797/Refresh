@@ -1,0 +1,600 @@
+{% load static %}
+
+<!-- ========================================================= -->
+<!-- OFFCANVAS HEADER — ESTILO FISERV                          -->
+<!-- ========================================================= -->
+<div class="offcanvas-header border-bottom">
+    <h4 class="offcanvas-title fw-bold text-dark">
+        <i class="fas fa-plus-circle me-2 text-orange"></i>
+        Add Source
+    </h4>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+</div>
+
+
+<!-- ========================================================= -->
+<!-- OFFCANVAS BODY                                            -->
+<!-- ========================================================= -->
+<div class="offcanvas-body">
+
+<form method="post"
+      enctype="multipart/form-data"
+      id="add-source-form"
+      novalidate
+      action="{% url 'add_source_global_offcanvas_submit' %}">
+
+    {% csrf_token %}
+    
+    <!-- Mensajes de error/success global -->
+    <div id="source-form-messages"></div>
+
+    <!-- ========================================================= -->
+    <!-- ACCORDION MASTER                                          -->
+    <!-- ========================================================= -->
+    <div class="accordion" id="accordionAddSource">
+        
+        <!-- ========================================================= -->
+        <!-- 1. BASIC INFORMATION                                      -->
+        <!-- ========================================================= -->
+        <div class="accordion-item shadow-sm mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold fs-6" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#panelBasic">
+                    <i class="fas fa-info-circle me-2 text-orange"></i>
+                    Basic Information
+                </button>
+            </h2>
+            <div id="panelBasic" class="accordion-collapse collapse show" data-bs-parent="#accordionAddSource">
+                <div class="accordion-body">
+                    
+                    
+                    <!-- EVENT (required) -->
+                    <div class="mb-3">
+                        <label class="form-label required">Event</label>
+                        <select name="event" class="form-select" required id="event-select">
+                            <option value="">-- Select Event --</option>
+                            {% for event in events %}
+                            <option value="{{ event.id }}" 
+                                    {% if preselect_event and event.id == preselect_event %}selected{% endif %}>
+                                {{ event.name }} ({{ event.theme.name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback d-none" id="event-error">
+                            Please select an event.
+                        </div>
+                    </div>
+                    
+                    <!-- NAME -->
+                    <div class="mb-3">
+                        <label class="form-label required">
+                            Name
+                            <span class="float-end text-muted">
+                                <span id="nmCnt">0</span>/30
+                            </span>
+                        </label>
+                        <input type="text" name="name" class="form-control" 
+                               maxlength="30" required placeholder="Enter source name">
+                        <div class="invalid-feedback d-none" id="name-error">
+                            Name must be 3-30 characters.
+                        </div>
+                    </div>
+                    
+                    <!-- DATE -->
+                    <div class="mb-3">
+                        <label class="form-label required">Date</label>
+                        <input type="date" name="source_date" class="form-control" 
+                               required value="{% now 'Y-m-d' %}">
+                        <div class="invalid-feedback d-none" id="date-error">
+                            Please select a date.
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- ========================================================= -->
+        <!-- 2. LINKS & FILES                                          -->
+        <!-- ========================================================= -->
+        <div class="accordion-item shadow-sm mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold fs-6 collapsed" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#panelFiles">
+                    <i class="fas fa-paperclip me-2 text-orange"></i>
+                    Links & Files
+                </button>
+            </h2>
+            <div id="panelFiles" class="accordion-collapse collapse" data-bs-parent="#accordionAddSource">
+                <div class="accordion-body">
+                    
+                    <!-- MAIN LINK -->
+                    <h6 class="text-muted fw-bold mb-2">
+                        <i class="fas fa-link me-2"></i>Link Options
+                    </h6>
+                    
+                    <label class="form-label">Main link (optional)</label>
+                    <input type="text" name="link_or_file" class="form-control" 
+                           placeholder="http(s):// or mailto:">
+                    <div class="invalid-feedback d-none" id="link-error">
+                        Enter a valid URL or mailto: link
+                    </div>
+                    
+                    <!-- EXTRA LINKS -->
+                    <label class="form-label mt-3">Additional links</label>
+                    <div id="extra-links">
+                        <div class="input-group mb-2">
+                            <input type="text" name="extra_links[]" class="form-control" 
+                                   placeholder="http(s):// or mailto:">
+                            <button type="button" class="btn btn-outline-secondary" onclick="addLink()">
+                                +
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <!-- MAIN FILE -->
+                    <h6 class="text-muted fw-bold mb-2">
+                        <i class="fas fa-file-upload me-2"></i>File Options
+                    </h6>
+                    
+                    <label class="form-label mt-2">Main file (optional)</label>
+                    <input type="file" name="file_upload" 
+                           class="form-control"
+                           accept=".pdf,.doc,.docx,.eml,.msg">
+                    <div class="form-text">Allowed: .pdf, .doc, .docx, .eml, .msg</div>
+                    
+                    <!-- EXTRA FILES -->
+                    <label class="form-label mt-3">Additional files</label>
+                    <div id="extra-files-container">
+                        <div class="input-group mb-2">
+                            <input type="file" name="extra_files[]" class="form-control"
+                                   accept=".pdf,.doc,.docx,.eml,.msg">
+                            <button type="button" class="btn btn-outline-danger"
+                                    onclick="removeExtraFileRow(this)">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-secondary btn-sm"
+                            onclick="addExtraFileRow()">
+                        <i class="fas fa-plus"></i> Add File
+                    </button>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- ========================================================= -->
+        <!-- 3. SUMMARY                                                -->
+        <!-- ========================================================= -->
+        <div class="accordion-item shadow-sm mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold fs-6 collapsed" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#panelSummary">
+                    <i class="fas fa-align-left me-2 text-orange"></i>
+                    Summary
+                </button>
+            </h2>
+            <div id="panelSummary" class="accordion-collapse collapse" data-bs-parent="#accordionAddSource">
+                <div class="accordion-body">
+                    
+                    <button type="button" id="generate-summary-btn" 
+                            class="btn btn-outline-info mb-3">
+                        <i class="fas fa-magic me-1"></i>
+                        Generate Summary with AI
+                    </button>
+                    
+                    <textarea name="summary" class="form-control" 
+                              rows="5" placeholder="Enter summary..."></textarea>
+                    
+                    <div class="invalid-feedback d-none" id="summary-error">
+                        Summary already exists for this event.
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+        
+        <!-- ========================================================= -->
+        <!-- 4. POTENTIAL IMPACT                                       -->
+        <!-- ========================================================= -->
+        <div class="accordion-item shadow-sm mb-3">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold fs-6 collapsed" type="button" 
+                        data-bs-toggle="collapse" data-bs-target="#panelImpact">
+                    <i class="fas fa-bolt me-2 text-orange"></i>
+                    Potential Impact
+                </button>
+            </h2>
+            <div id="panelImpact" class="accordion-collapse collapse" data-bs-parent="#accordionAddSource">
+                <div class="accordion-body">
+                    
+                    <div class="btn-group btn-group-sm mb-3" role="group">
+                        <input type="radio" class="btn-check" id="piEsc" value="3" 
+                               name="potential_impact">
+                        <label class="btn btn-outline-danger" for="piEsc">
+                            <i class="fas fa-arrow-up me-1"></i> Escalating
+                        </label>
+                        
+                        <input type="radio" class="btn-check" id="piMain" value="2" 
+                               name="potential_impact">
+                        <label class="btn btn-outline-warning" for="piMain">
+                            <i class="fas fa-arrow-right me-1"></i> Maintaining
+                        </label>
+                        
+                        <input type="radio" class="btn-check" id="piDec" value="1" 
+                               name="potential_impact">
+                        <label class="btn btn-outline-success" for="piDec">
+                            <i class="fas fa-arrow-down me-1"></i> Decreasing
+                        </label>
+                    </div>
+                    
+                    <textarea name="potential_impact_notes" class="form-control" 
+                              rows="3" placeholder="Impact notes..."></textarea>
+                    
+                </div>
+            </div>
+        </div>
+        
+    </div> <!-- END ACCORDION -->
+    
+    <!-- ========================================================= -->
+    <!-- SAVE BUTTONS -->
+    <!-- ========================================================= -->
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" class="btn btn-light" data-bs-dismiss="offcanvas">
+            <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="submit" class="btn btn-orange" id="save-source-btn">
+            <i class="fas fa-save me-2"></i>Save Source
+        </button>
+    </div>
+    
+</form>
+
+</div>
+
+<style>
+.text-orange { color:#ff6600; }
+.accordion-button:not(.collapsed) { background:#fff3e6; color:#ff6600; }
+.form-label.required:after { content:" *"; color:#dc3545; }
+</style>
+
+<script>
+// 1. CONTADOR DE NOMBRE
+document.addEventListener('DOMContentLoaded', function() {
+    const nameInput = document.querySelector('input[name="name"]');
+    const nameCounter = document.getElementById('nmCnt');
+    if (nameInput && nameCounter) {
+        nameCounter.textContent = nameInput.value.length;
+        nameInput.addEventListener('input', function() {
+            nameCounter.textContent = this.value.length;
+        });
+    }
+});
+
+// 2. FUNCIONES PARA LINKS Y ARCHIVOS
+function addLink() {
+    const container = document.getElementById('extra-links');
+    const newRow = document.createElement('div');
+    newRow.className = 'input-group mb-2';
+    newRow.innerHTML = `
+        <input type="text" name="extra_links[]" class="form-control" placeholder="http(s):// or mailto:">
+        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.appendChild(newRow);
+}
+
+function addExtraFileRow() {
+    const container = document.getElementById('extra-files-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'input-group mb-2';
+    newRow.innerHTML = `
+        <input type="file" name="extra_files[]" class="form-control" accept=".pdf,.doc,.docx,.eml,.msg">
+        <button type="button" class="btn btn-outline-danger" onclick="removeExtraFileRow(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.appendChild(newRow);
+}
+
+function removeExtraFileRow(button) {
+    const row = button.closest('.input-group');
+    if (row) row.remove();
+}
+
+// 3. VALIDACIÓN DE URLS
+function isValidUrl(value) {
+    if (!value.trim()) return true;
+    
+    if (value.startsWith('mailto:')) {
+        return value.includes('@');
+    }
+    
+    try {
+        const url = new URL(value);
+        return ['http:', 'https:'].includes(url.protocol);
+    } catch {
+        return false;
+    }
+}
+
+// 4. FORM SUBMIT HANDLER
+document.getElementById('add-source-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const saveBtn = document.getElementById('save-source-btn');
+    const originalBtnText = saveBtn.innerHTML;
+    
+    // Clear previous errors
+    clearErrors();
+    
+    // Basic validation
+    let isValid = true;
+    
+    // Event validation
+    const eventSelect = form.querySelector('select[name="event"]');
+    if (!eventSelect.value) {
+        showError('event-error', 'Please select an event');
+        isValid = false;
+    }
+    
+    // Name validation
+    const nameInput = form.querySelector('input[name="name"]');
+    if (!nameInput.value.trim() || nameInput.value.length < 3) {
+        showError('name-error', 'Name must be at least 3 characters');
+        isValid = false;
+    }
+    
+    // Date validation
+    const dateInput = form.querySelector('input[name="source_date"]');
+    if (!dateInput.value) {
+        showError('date-error', 'Please select a date');
+        isValid = false;
+    }
+    
+    // URL validation
+    const mainLink = form.querySelector('input[name="link_or_file"]');
+    if (mainLink.value && !isValidUrl(mainLink.value)) {
+        showError('link-error', 'Enter a valid URL or mailto: link');
+        isValid = false;
+    }
+    
+    // Check if at least one link or file
+    const extraLinks = Array.from(form.querySelectorAll('input[name="extra_links[]"]'));
+    const extraFiles = Array.from(form.querySelectorAll('input[name="extra_files[]"]'));
+    const hasLink = mainLink.value || extraLinks.some(input => input.value.trim());
+    const hasFile = form.querySelector('input[name="file_upload"]').files.length > 0 || 
+                   extraFiles.some(input => input.files.length > 0);
+    
+    if (!hasLink && !hasFile) {
+        showMessage('Please add at least one link or file', 'warning');
+        isValid = false;
+    }
+    
+    if (!isValid) return;
+    
+    // Disable button and show loading
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    try {
+        const formData = new FormData(form);
+        
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showMessage('Source created successfully! Redirecting...', 'success');
+            
+            // Close offcanvas after delay
+            setTimeout(() => {
+                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('globalOffcanvas'));
+                if (offcanvas) offcanvas.hide();
+                
+                // Redirect if URL provided
+                if (data.redirect_url) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url;
+                    }, 500);
+                } else if (typeof loadEventsTable === 'function') {
+                    // Refresh events in dashboard
+                    setTimeout(loadEventsTable, 300);
+                }
+            }, 1500);
+            
+        } else {
+            // Show errors from server
+            if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    showError(field + '-error', errors[0]);
+                }
+            }
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('Network error. Please try again.', 'error');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalBtnText;
+    }
+});
+
+// Helper functions
+function clearErrors() {
+    document.querySelectorAll('.invalid-feedback').forEach(el => {
+        el.classList.add('d-none');
+    });
+    document.querySelectorAll('.is-invalid').forEach(el => {
+        el.classList.remove('is-invalid');
+    });
+}
+
+function showError(elementId, message) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    element.textContent = message;
+    element.classList.remove('d-none');
+    
+    // Find corresponding input and mark as invalid
+    const inputName = elementId.replace('-error', '');
+    const input = document.querySelector(`[name="${inputName}"]`);
+    if (input) input.classList.add('is-invalid');
+}
+
+function showMessage(message, type = 'info') {
+    const container = document.getElementById('source-form-messages');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+}
+
+// 5. AI SUMMARY FUNCTION
+document.getElementById('generate-summary-btn')?.addEventListener('click', async function() {
+    const button = this;
+    const summaryField = document.querySelector('textarea[name="summary"]');
+    
+    if (!summaryField) return;
+    
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+    
+    try {
+        const form = document.getElementById('add-source-form');
+        const formData = new FormData(form);
+        
+        const response = await fetch('{% url "summarize" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('input[name="csrfmiddlewaretoken"]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.summary) {
+            summaryField.value = typeof data.summary === 'string' 
+                ? data.summary 
+                : data.summary.combined_summary;
+        } else {
+            summaryField.value = 'Error: Could not generate summary.';
+        }
+    } catch (error) {
+        console.error('AI Summary Error:', error);
+        summaryField.value = 'Error: Could not connect to AI service.';
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-magic me-1"></i>Generate Summary with AI';
+    }
+});
+
+
+const isInIframe = window !== window.top;
+
+// 2. Modificar la función de éxito para notificar al padre
+if (isInIframe) {
+    // Sobrescribir el manejo de éxito del formulario existente
+    const originalFormSubmit = window.handleFormSubmit; // Si tienes una función global
+    
+    // O mejor: modificar directamente el event listener existente
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('add-source-form');
+        if (!form) return;
+        
+        // Guardar el listener original
+        const originalSubmitHandler = form._submitHandler;
+        
+        // Reemplazar con uno que notifique al padre
+        form.onsubmit = async function(e) {
+            e.preventDefault();
+            
+            // Tu lógica de validación original aquí...
+            
+            // En la parte de éxito (después de data.success):
+            if (data.success) {
+                // Notificar al padre que se guardó exitosamente
+                window.parent.postMessage({
+                    type: 'sourceSaved',
+                    sourceId: data.source_id || null,
+                    eventId: data.event_id || null
+                }, '*');
+                
+                // Cerrar el offcanvas después de 1.5 segundos
+                setTimeout(() => {
+                    window.parent.postMessage({
+                        type: 'closeOffcanvas'
+                    }, '*');
+                }, 1500);
+            }
+        };
+    });
+}
+
+// 3. Función para notificar éxito (puedes llamarla desde tu código AJAX)
+function notifyParentSuccess(sourceId, eventId) {
+    if (isInIframe) {
+        window.parent.postMessage({
+            type: 'sourceSaved',
+            sourceId: sourceId,
+            eventId: eventId,
+            timestamp: new Date().toISOString()
+        }, '*');
+    }
+}
+
+// 4. Función para notificar error
+function notifyParentError(message) {
+    if (isInIframe) {
+        window.parent.postMessage({
+            type: 'sourceError',
+            message: message
+        }, '*');
+    }
+}
+
+// 5. También modifica TU CÓDIGO AJAX EXISTENTE (en la parte de success):
+// Encuentra esta parte en tu código:
+if (data.success) {
+    showMessage('Source created successfully! Redirecting...', 'success');
+    
+    // AÑADE ESTO:
+    if (isInIframe) {
+        // Notificar al padre
+        notifyParentSuccess(data.source_id, data.event_id);
+        
+        // No redirigir inmediatamente, dejar que el padre maneje
+        setTimeout(() => {
+            // Solo cerrar el offcanvas
+            window.parent.postMessage({ type: 'closeOffcanvas' }, '*');
+        }, 1500);
+        
+        return; // Evitar la redirección automática
+    }
+    
+    // ... resto de tu código original para cuando NO está en iframe
+}
+</script>

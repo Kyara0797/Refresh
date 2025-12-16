@@ -7,11 +7,11 @@ def view_theme(request, pk):
 
     events = theme.events.all()
 
-    # Mapeo de severidad para ordenar Risk Rating (CRITICAL > HIGH > MEDIUM > LOW)
+    # Mapeo de severidad para ordenar Risk Rating (CRITICAL > HIGH > Moderate > LOW)
     risk_order = Case(
         When(risk_rating="CRITICAL", then=1),
         When(risk_rating="HIGH", then=2),
-        When(risk_rating="MEDIUM", then=3),
+        When(risk_rating="MODERATE", then=3),
         When(risk_rating="LOW", then=4),
         default=5,
         output_field=IntegerField(),

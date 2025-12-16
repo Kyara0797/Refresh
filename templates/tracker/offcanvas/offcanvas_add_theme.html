@@ -1,0 +1,540 @@
+<!-- ========== OFF CANVAS ADD THEME CORREGIDO ========== -->
+{% load widget_tweaks %}
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="addThemeOffcanvas"
+     aria-labelledby="offcanvasThemeLabel" style="width: 540px;">
+
+    <!-- HEADER -->
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold" id="offcanvasThemeLabel">
+            <i class="fas fa-tag me-2 text-orange"></i>Add Threat
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" id="closeThemeOffcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <!-- FORM ERROR CONTAINER -->
+        <div id="themeFormErrors" class="alert alert-danger d-none" role="alert"></div>
+        
+        <!-- PROGRESS INDICATOR -->
+        <div id="formProgress" class="progress mb-3 d-none" style="height: 3px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                 role="progressbar" style="width: 100%"></div>
+        </div>
+
+        <form id="themeForm" method="post" novalidate action="{% url 'add_theme_offcanvas' %}">
+            {% csrf_token %}
+
+            <!-- Hidden field to store form data for persistence -->
+            <input type="hidden" id="formPersistenceData" 
+                   value='{{ saved_form_data|default:"{}"|escapejs }}'>
+
+            <!-- AÑADE ESTE CAMPO HIDDEN MANUALMENTE - ES EL FIX -->
+            <input type="hidden" name="risk_rating" id="id_risk_rating" value="{{ form.risk_rating.value|default:'' }}">
+
+            <div class="accordion" id="themeAccordion">
+
+                <!-- BASIC INFO -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#sectionBasicInfo">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </button>
+                    </h2>
+
+                    <div id="sectionBasicInfo"
+                         class="accordion-collapse collapse show"
+                         data-bs-parent="#themeAccordion">
+                        <div class="accordion-body">
+
+                            <!-- CATEGORY -->
+                            <div class="mb-3">
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                {{ form.category|add_class:"form-select"|attr:"required" }}
+                                <div class="invalid-feedback d-none" id="category-error"></div>
+                            </div>
+
+                            <!-- NAME -->
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    Name
+                                    <span class="float-end text-muted"><span id="theme-name-count">0</span>/30</span>
+                                </label>
+                                {{ form.name|add_class:"form-control"|attr:"maxlength:30"|attr:"required"|attr:"minlength:3" }}
+                                <div class="invalid-feedback d-none" id="name-error"></div>
+                                <div class="form-text">Enter a unique name for this threat (3-30 characters)</div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLASSIFICATION -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#sectionClassification">
+                            <i class="fas fa-tags me-2"></i>Classification
+                        </button>
+                    </h2>
+
+                    <div id="sectionClassification"
+                         class="accordion-collapse collapse"
+                         data-bs-parent="#themeAccordion">
+                        <div class="accordion-body">
+
+                            <!-- ELIMINA O COMENTA ESTE BLOQUE - NO LO NECESITAMOS -->
+                            <!-- 
+                            <div class="d-none">
+                                {{ form.risk_rating|add_class:"form-select" }}
+                            </div>
+                            -->
+
+                            <label class="form-label">Risk Rating <span class="text-danger">*</span></label>
+
+                            <!-- RISK CARDS -->
+                            <div class="row g-2 mb-3" id="riskCardsContainer">
+
+                                <div class="col-6 col-sm-3">
+                                    <div class="risk-card w-100" data-value="low" role="button" tabindex="0">
+                                        <div class="risk-icon low"><i class="fas fa-check-circle"></i></div>
+                                        <div class="risk-label">Low</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6 col-sm-3">
+                                    <div class="risk-card w-100" data-value="moderate" role="button" tabindex="0">
+                                        <div class="risk-icon moderate"><i class="fas fa-exclamation-circle"></i></div>
+                                        <div class="risk-label">Moderate</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6 col-sm-3">
+                                    <div class="risk-card w-100" data-value="high" role="button" tabindex="0">
+                                        <div class="risk-icon high"><i class="fas fa-exclamation-triangle"></i></div>
+                                        <div class="risk-label">High</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-6 col-sm-3">
+                                    <div class="risk-card w-100" data-value="critical" role="button" tabindex="0">
+                                        <div class="risk-icon critical"><i class="fas fa-skull-crossbones"></i></div>
+                                        <div class="risk-label">Critical</div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div id="risk-rating-error" class="invalid-feedback d-none">
+                                Please select a risk rating.
+                            </div>
+
+                            <!-- ONSET -->
+                            <div class="mb-3">
+                                <label class="form-label">Onset Timeline <span class="text-danger">*</span></label>
+                                {{ form.onset_timeline|add_class:"form-select"|attr:"required" }}
+                                <div class="invalid-feedback d-none" id="onset_timeline-error"></div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="mt-4 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" id="cancelThemeBtn">
+                    Cancel
+                </button>
+
+                <div>
+                    <button type="button" class="btn btn-outline-secondary me-2" id="clearThemeForm">
+                        <i class="fas fa-eraser me-1"></i>Clear
+                    </button>
+                    <button type="submit" class="btn btn-orange px-4" id="submitThemeBtn">
+                        <i class="fas fa-save me-2"></i>Save Threat
+                    </button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- ========== STYLES ========== -->
+<style>
+.text-orange { color:#f26522; }
+.btn-orange { background:#f26522; color:#fff; border:none; }
+.btn-orange:hover { background:#d3541c; }
+.btn-orange:disabled { background:#f26522; opacity:0.65; }
+
+.risk-card{
+    border:2px solid #dee2e6;
+    border-radius:.8rem;
+    padding:.7rem .4rem;
+    background:white;
+    transition:all .15s ease;
+    cursor:pointer;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+}
+
+.risk-card:hover{
+    border-color:#adb5bd;
+    background-color:#f8f9fa;
+    transform:translateY(-2px);
+    box-shadow:0 4px 8px rgba(0,0,0,0.1);
+}
+
+.risk-card:focus{
+    outline:2px solid #f26522;
+    outline-offset:2px;
+}
+
+.risk-card.selected{
+    border-color:#f26522 !important;
+    background-color:rgba(242,101,34,0.05) !important;
+    box-shadow:0 0 0 .15rem rgba(242,101,34,.3) !important;
+}
+
+.risk-card.selected::before {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    color: #f26522;
+    font-weight: bold;
+}
+
+.low { color:#28a745; }
+.moderate { color:#ffc107; }
+.high { color:#fd7e14; }
+.critical { color:#dc3545; }
+
+/* Error styles */
+.is-invalid {
+    border-color: #dc3545 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    padding-right: calc(1.5em + 0.75rem);
+}
+
+.invalid-feedback {
+    display: block !important;
+    color: #dc3545;
+    font-size: 0.875em;
+    margin-top: 0.25rem;
+}
+
+/* Character counter warning */
+.char-warning {
+    color: #fd7e14 !important;
+    font-weight: bold;
+}
+
+.char-danger {
+    color: #dc3545 !important;
+    font-weight: bold;
+}
+
+/* Para el contenedor de risk cards cuando tiene error */
+#riskCardsContainer.has-error {
+    border: 1px solid #dc3545;
+    border-radius: 0.375rem;
+    padding: 10px;
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+/* Toast notifications */
+.theme-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+}
+
+/* Success animation */
+@keyframes pulseSuccess {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+.pulse-success {
+    animation: pulseSuccess 1s;
+}
+
+/* Progress bar animation */
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% { background-position: 1rem 0; }
+    100% { background-position: 0 0; }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    console.log(" Add Theme Offcanvas inicializado");
+
+    // === ELEMENTOS PRINCIPALES ===
+    const themeForm = document.getElementById("themeForm");
+    const riskCards = document.querySelectorAll(".risk-card");
+    const riskRatingField = document.getElementById("id_risk_rating");
+    const riskRatingError = document.getElementById("risk-rating-error");
+    const riskCardsContainer = document.getElementById("riskCardsContainer");
+    const nameInput = document.querySelector('[name="name"]');
+    const nameCounter = document.getElementById("theme-name-count");
+    const clearBtn = document.getElementById("clearThemeForm");
+    const submitBtn = document.getElementById("submitThemeBtn");
+    const formErrors = document.getElementById("themeFormErrors");
+
+    let isSubmitting = false;
+
+    // ================================================================
+    //  1. INICIALIZACIÓN
+    // ================================================================
+    init();
+
+    function init() {
+        setupRiskCards();
+        setupNameCounter();
+        setupFormValidation();
+        setupClearButton();
+        setupFormResetOnClose();
+        console.log("✓ Setup completo del Add Theme Offcanvas");
+    }
+
+    // ================================================================
+    //  2. RISK CARDS – SELECCIÓN + VALIDACIÓN
+    // ================================================================
+    function setupRiskCards() {
+        console.log("DEBUG: iniciando risk cards");
+
+        riskCards.forEach(card => {
+            card.addEventListener("click", function () {
+                const value = this.dataset.value; // low/moderate/high/critical
+
+                console.log("Card seleccionada:", value);
+
+                // Remover selección previa
+                riskCards.forEach(c => c.classList.remove("selected"));
+
+                // Agregar selección
+                this.classList.add("selected");
+
+                // Guardar SIEMPRE en minúsculas (lo que Django requiere)
+                riskRatingField.value = value.toLowerCase();
+                console.log("Risk en hidden field:", riskRatingField.value);
+
+                // Ocultar errores de risk rating
+                riskRatingError.classList.add("d-none");
+                riskCardsContainer.classList.remove("has-error");
+            });
+        });
+    }
+
+    // ================================================================
+    //  3. CONTADOR DEL NOMBRE
+    // ================================================================
+    function setupNameCounter() {
+        if (!nameInput || !nameCounter) return;
+
+        const update = () => {
+            const len = nameInput.value.length;
+            nameCounter.textContent = len;
+
+            nameCounter.classList.remove("char-warning", "char-danger");
+
+            if (len >= 25 && len < 30) {
+                nameCounter.classList.add("char-warning");
+            } else if (len >= 30) {
+                nameCounter.classList.add("char-danger");
+            }
+        };
+
+        update();
+        nameInput.addEventListener("input", update);
+    }
+
+    // ================================================================
+    // 4. VALIDACIÓN GENERAL DEL FORMULARIO
+    // ================================================================
+    function setupFormValidation() {
+        themeForm.addEventListener("submit", handleSubmit);
+
+        // Validación en tiempo real solo para campos required
+        themeForm.querySelectorAll("[required]").forEach(f => {
+            f.addEventListener("input", () => {
+                f.classList.remove("is-invalid");
+                const errorField = document.getElementById(`${f.name}-error`);
+                if (errorField) errorField.classList.add("d-none");
+            });
+        });
+    }
+
+    function validateForm() {
+        let isValid = true;
+
+        // Validar campos required (menos risk_rating)
+        const requiredFields = themeForm.querySelectorAll("[required]:not([name='risk_rating'])");
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add("is-invalid");
+                const errorField = document.getElementById(`${field.name}-error`);
+                if (errorField) errorField.textContent = "This field is required";
+                if (errorField) errorField.classList.remove("d-none");
+                isValid = false;
+            }
+        });
+
+        // === VALIDACIÓN ESPECIAL DEL RISK RATING ===
+        console.log("Validando risk_rating:", riskRatingField.value);
+
+        if (!riskRatingField.value.trim()) {
+            riskRatingError.classList.remove("d-none");
+            riskCardsContainer.classList.add("has-error");
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    // ================================================================
+    //  5. ENVÍO DEL FORMULARIO (AJAX)
+    // ================================================================
+    async function handleSubmit(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isSubmitting) return;
+
+        console.log("=== Enviando formulario Add Theme ===");
+
+        // Validación
+        if (!validateForm()) {
+            console.log(" Validación fallida");
+            return;
+        }
+
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        const originalHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+
+        try {
+            const formData = new FormData(themeForm);
+
+            // DEBUG
+            console.log("Datos enviados:");
+            for (let [k, v] of formData.entries()) console.log(k, ":", v);
+
+            const response = await fetch(themeForm.action, {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+
+            const data = await response.json();
+            console.log("Respuesta servidor:", data);
+
+            if (data.success) {
+                alert("Threat saved successfully!");
+
+                // Reset form
+                clearForm();
+
+                // Cerrar offcanvas con delay
+                setTimeout(() => {
+                    const offcanvasEl = document.getElementById("addThemeOffcanvas");
+                    const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                    if (offcanvas) offcanvas.hide();
+                }, 300);
+
+                // Recargar para ver el nuevo Theme
+                setTimeout(() => window.location.reload(), 700);
+
+            } else {
+                console.log(" Error servidor", data);
+
+                if (data.errors) displayServerErrors(data.errors);
+            }
+
+        } catch (error) {
+            console.error(" Error de red:", error);
+            alert("Network error. Please try again.");
+        } finally {
+            isSubmitting = false;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHTML;
+        }
+    }
+
+    function displayServerErrors(errors) {
+        console.log("Mostrando errores del servidor:", errors);
+
+        Object.keys(errors).forEach(field => {
+            if (field === "risk_rating") {
+                riskRatingError.textContent = errors[field][0];
+                riskRatingError.classList.remove("d-none");
+                riskCardsContainer.classList.add("has-error");
+            }
+        });
+    }
+
+    // ================================================================
+    //  6. CLEAR BUTTON
+    // ================================================================
+    function setupClearButton() {
+        if (!clearBtn) return;
+
+        clearBtn.addEventListener("click", () => {
+            clearForm();
+        });
+    }
+
+    function clearForm() {
+        console.log("🧹 Limpiando formulario Add Theme");
+
+        themeForm.reset();
+
+        // Reset selección de risk cards
+        riskCards.forEach(c => c.classList.remove("selected"));
+        riskRatingField.value = "";
+        riskCardsContainer.classList.remove("has-error");
+        riskRatingError.classList.add("d-none");
+
+        // Reset estilos inválidos
+        themeForm.querySelectorAll(".is-invalid").forEach(el => el.classList.remove("is-invalid"));
+        themeForm.querySelectorAll(".invalid-feedback").forEach(el => el.classList.add("d-none"));
+
+        // Contador nombre
+        if (nameInput) nameInput.dispatchEvent(new Event("input"));
+    }
+
+    // ================================================================
+    //  7. RESET AUTOMÁTICO AL CERRAR OFFCANVAS
+    // ================================================================
+    function setupFormResetOnClose() {
+        const offcanvas = document.getElementById("addThemeOffcanvas");
+
+        if (!offcanvas) return;
+
+        offcanvas.addEventListener("hidden.bs.offcanvas", () => {
+            clearForm();
+        });
+    }
+});
+</script>
+
+

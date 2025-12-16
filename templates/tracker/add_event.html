@@ -128,7 +128,7 @@
                         <select class="form-select hidden" id="risk_rating" name="risk_rating" required>
                           <option value="">Select risk rating</option>
                           <option value="LOW">Low</option>
-                          <option value="MEDIUM">Medium</option>
+                          <option value="MEDIUM">Moderate</option>
                           <option value="HIGH">High</option>
                           <option value="CRITICAL">Critical</option>
                         </select>
@@ -137,8 +137,8 @@
                           <div class="risk-item" data-value="LOW" role="button" tabindex="0">
                             <div class="rating-display"><span class="risk-color risk-low"></span><span class="ms-2">Low</span></div>
                           </div>
-                          <div class="risk-item" data-value="MEDIUM" role="button" tabindex="0">
-                            <div class="rating-display"><span class="risk-color risk-medium"></span><span class="ms-2">Medium</span></div>
+                          <div class="risk-item" data-value="MODERATE" role="button" tabindex="0">
+                            <div class="rating-display"><span class="risk-color risk-medium"></span><span class="ms-2">Moderate</span></div>
                           </div>
                           <div class="risk-item" data-value="HIGH" role="button" tabindex="0">
                             <div class="rating-display"><span class="risk-color risk-high"></span><span class="ms-2">High</span></div>
@@ -378,31 +378,6 @@
                     <div class="invalid-feedback">Please enter a description.</div>
                   </div>
 
-                  <div class="row">
-                    <div class="col-md-6">
-                      <label class="form-label">Potential Impact Trend</label>
-                      <div class="impact-trend">
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="impact_trend" id="escalating" value="ESCALATING">
-                          <label class="form-check-label" for="escalating"><i class="fas fa-arrow-up text-danger me-2"></i> Risk is Escalating</label>
-                        </div>
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="impact_trend" id="maintaining" value="MAINTAINING" checked>
-                          <label class="form-check-label" for="maintaining"><i class="fas fa-arrow-right text-warning me-2"></i> Risk is Maintaining</label>
-                        </div>
-                        <div class="form-check">
-                          <input class="form-check-input" type="radio" name="impact_trend" id="decreasing" value="DECREASING">
-                          <label class="form-check-label" for="decreasing"><i class="fas fa-arrow-down text-success me-2"></i> Risk is Decreasing</label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="col-md-6">
-                      <div class="mb-3">
-                        <label for="impact_notes" class="form-label">Potential Impact Notes</label>
-                        <textarea class="form-control" id="impact_notes" name="impact_notes" rows="5" placeholder="Describe the potential impact details..."></textarea>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -421,7 +396,7 @@
             <h6>Risk Rating Legend:</h6>
             <div class="d-flex flex-wrap gap-3">
               <div class="risk-option"><span>Low</span><span class="risk-color risk-low"></span></div>
-              <div class="risk-option"><span>Medium</span><span class="risk-color risk-medium"></span></div>
+              <div class="risk-option"><span>Moderate</span><span class="risk-color risk-medium"></span></div>
               <div class="risk-option"><span>High</span><span class="risk-color risk-high"></span></div>
               <div class="risk-option"><span>Critical</span><span class="risk-color risk-critical"></span></div>
             </div>

@@ -1,0 +1,44 @@
+<div class="accordion-item event-item mb-2 shadow-sm border-0" id="event-{{ event.id }}">
+  
+  <h2 class="accordion-header" id="heading-{{ event.id }}">
+    <button class="accordion-button collapsed px-3"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#collapse-{{ event.id }}"
+            aria-expanded="false">
+
+      <div class="d-flex w-100 justify-content-between align-items-center">
+
+        <!-- Nombre -->
+        <strong class="text-dark">{{ event.name }}</strong>
+
+        <!-- Fecha -->
+        <span class="text-muted">{{ event.date_identified|date:"Y-m-d" }}</span>
+
+        <!-- Risk badge -->
+        <span class="badge bg-{{ event.get_risk_color }}">
+          {{ event.get_risk_rating_display }}
+        </span>
+
+      </div>
+
+    </button>
+  </h2>
+
+  <div id="collapse-{{ event.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ event.id }}">
+    <div class="accordion-body">
+
+      <!-- Lista de Sources -->
+      {% include "tracker/partials/event_sources.html" with event=event %}
+
+      <!-- Add Source -->
+      <div class="text-end mt-3">
+        <a href="{% url 'add_source' event_pk=event.id %}" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-plus me-1"></i>Add Source
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+</div>

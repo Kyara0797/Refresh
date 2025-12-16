@@ -1,0 +1,264 @@
+{% if events_page %}
+<div class="table-responsive px-3 pb-3">
+  <table class="table table-hover align-middle mb-0" id="eventsTable">
+    <thead class="table-light">
+      <tr>
+        <th style="width:70px;">Source</th>
+        <th>Event</th>
+        <th>Threat</th>
+        <th>Date Identified</th>
+        <th>Risk</th>
+        <th>Status</th>
+        <th class="no-sort text-center" style="width:40px;"></th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for event in events_page %}
+      <!-- EVENT ROW -->
+      <tr class="event-item {% if not event.is_active %}table-light text-muted{% endif %}"
+          data-event-id="{{ event.id }}"
+          onclick="toggleEventSources({{ event.id }})"
+          style="cursor: pointer;">
+          
+        <!-- SOURCE COUNT (con indicador) -->
+        <td>
+          <div class="d-flex align-items-center">
+            <small class="me-2">{{ event.sources.count }}</small>
+            {% if event.sources.count > 0 %}
+            <i class="fas fa-chevron-right text-muted event-chevron" 
+               id="chevron-{{ event.id }}"
+               style="font-size: 0.8rem;"></i>
+            {% endif %}
+          </div>
+        </td>
+
+        <!-- EVENT NAME -->
+        <td>
+          <a class="fw-semibold text-decoration-none text-dark"
+             href="{% url 'view_event' event_id=event.id %}"
+             onclick="event.stopPropagation()">
+            {{ event.name }}
+          </a>
+        </td>
+
+        <!-- THREAT / THEME -->
+        <td>{{ event.theme.name }}</td>
+
+        <!-- DATE IDENTIFIED -->
+        <td>{{ event.date_identified|date:"m-d-Y" }}</td>
+
+        <!-- RISK -->
+        <td>
+          <span class="badge bg-{{ event.get_risk_color }}">
+            {{ event.get_risk_rating_display }}
+          </span>
+        </td>
+
+        <!-- STATUS -->
+        <td>
+          {% if event.is_active %}
+            <span class="badge bg-success">Active</span>
+          {% else %}
+            <span class="badge bg-secondary">Archived</span>
+          {% endif %}
+        </td>
+
+        <!-- ACTIONS -->
+        <td class="text-center" onclick="event.stopPropagation()">
+          <div class="dropdown">
+            <button class="btn btn-link btn-sm text-muted p-0"
+                    data-bs-toggle="dropdown"
+                    onclick="event.stopPropagation()">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+              <!-- ADD SOURCE (preselected event) -->
+              <li>
+                {% comment %} <button class="dropdown-item"
+                  onclick="event.stopPropagation(); loadOffcanvas('{% url 'add_source_offcanvas' event.id %}', 'Add Source')">
+                  <i class="fas fa-paperclip me-2 text-orange"></i>Add Source
+                </button> {% endcomment %}
+                <button class="btn btn-sm btn-outline-orange"
+                        onclick="openAddSourceGlobalOffcanvas({{ event.id }})">
+                    + Add Source
+                </button>
+              </li>
+
+              <!-- DETAILS -->
+              <li>
+                <a class="dropdown-item"
+                   href="{% url 'view_event' event_id=event.id %}"
+                   onclick="event.stopPropagation()">
+                  <i class="fas fa-eye me-2 text-orange"></i>Details
+                </a>
+              </li>
+
+              <!-- EDIT EVENT -->
+              <li>
+                <button class="dropdown-item"
+                        onclick="event.stopPropagation(); loadOffcanvas('{% url 'edit_event_offcanvas' event.id %}', 'Edit Event')">
+                  <i class="fas fa-pen me-2 text-orange"></i>Edit
+                </button>
+              </li>
+
+              <li><hr class="dropdown-divider"></li>
+
+              <!-- ARCHIVE / RESTORE -->
+              <li>
+                <form method="post" action="{% url 'toggle_event_active' pk=event.id %}" 
+                      onsubmit="event.stopPropagation()">
+                  {% csrf_token %}
+                  {% if event.is_active %}
+                    <button type="submit" class="dropdown-item text-danger">
+                      <i class="fas fa-box-archive me-2"></i>Archive
+                    </button>
+                  {% else %}
+                    <button type="submit" class="dropdown-item text-success">
+                      <i class="fas fa-rotate-left me-2"></i>Restore
+                    </button>
+                  {% endif %}
+                </form>
+              </li>
+            </ul>
+          </div>
+        </td>
+      </tr>
+
+      <!-- SOURCES ROW (acordeón) -->
+      <tr id="sources-{{ event.id }}" class="sources-row" style="display: none;">
+        <td colspan="7" class="p-0 border-0">
+          <div class="sources-container bg-light">
+            {% for source in event.sources.all %}
+            <div class="source-item d-flex align-items-center border-bottom" 
+                 style="border-left: 4px solid #fd7e14; background-color: #fffaf0;">
+              <div class="flex-grow-1 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <h6 class="mb-1 fw-semibold">{{ source.name }}</h6>
+                    <small class="text-muted">
+                      <i class="fas fa-calendar-alt me-1"></i>
+                      {{ source.date_published|date:"m-d-Y"|default:"No date" }}
+                    </small>
+                  </div>
+                  <div class="dropdown">
+                    <button class="btn btn-link btn-sm text-muted p-0"
+                            data-bs-toggle="dropdown">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                      <li>
+                        <a class="dropdown-item" 
+                           href="{% url 'edit_source' source.id %}"
+                           target="_blank">
+                          <i class="fas fa-pen me-2 text-orange"></i>Edit Source
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li>
+                        <form method="post" 
+                              action="{% url 'toggle_source_active' pk=source.id %}">
+                          {% csrf_token %}
+                          {% if source.is_active %}
+                            <button type="submit" class="dropdown-item text-danger">
+                              <i class="fas fa-box-archive me-2"></i>Archive
+                            </button>
+                          {% else %}
+                            <button type="submit" class="dropdown-item text-success">
+                              <i class="fas fa-rotate-left me-2"></i>Restore
+                            </button>
+                          {% endif %}
+                        </form>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4 text-muted">
+              <i class="fas fa-paperclip fa-lg mb-2"></i>
+              <p>No sources attached</p>
+              <button class="btn btn-sm btn-outline-orange"
+                      onclick="loadOffcanvas('{% url 'add_source_offcanvas' event.id %}', 'Add Source')">
+                + Add Source
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center py-4">No events found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Paginación MEJORADA -->
+{% if events_page.has_other_pages and not show_all_events %}
+<div class="px-4 py-3 border-top events-pagination">
+    <div class="d-flex justify-content-between align-items-center">
+        <small class="text-muted">
+            Showing {{ events_page.start_index }} - {{ events_page.end_index }} of {{ events_page.paginator.count }} events
+        </small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if events_page.has_previous %}
+                <li class="page-item">
+                    <button type="button" 
+                            class="page-link" 
+                            data-page="{{ events_page.previous_page_number }}"
+                            aria-label="Previous">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </li>
+                {% endif %}
+                
+                {% for num in events_page.paginator.page_range %}
+                    {% if events_page.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > events_page.number|add:'-3' and num < events_page.number|add:'3' %}
+                    <li class="page-item">
+                        <button type="button" 
+                                class="page-link" 
+                                data-page="{{ num }}">
+                            {{ num }}
+                        </button>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if events_page.has_next %}
+                <li class="page-item">
+                    <button type="button" 
+                            class="page-link" 
+                            data-page="{{ events_page.next_page_number }}"
+                            aria-label="Next">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% elif show_all_events %}
+<div class="px-4 py-3 border-top">
+    <small class="text-muted">
+        Showing all {{ events_page.paginator.count }} events
+    </small>
+</div>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-calendar-times fa-2x text-muted mb-3"></i>
+    <p class="text-muted">No events found.</p>
+</div>
+{% endif %}

@@ -21,24 +21,33 @@ from config import settings
 from tracker import views as tracker_views
 from django.conf.urls.static import static
 from tracker.forms import EmailOrUsernameAuthenticationForm
-from django.views.generic.base import TemplateView
-urlpatterns = [
-    
-    path("admin/", admin.site.urls),
+from django.views.generic.base import TemplateView, RedirectView
+from django.shortcuts import redirect
 
+def redirect_to_dashboard(request):
+    return redirect('dashboard/')
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    
+    # Redirección raíz al dashboard
+    path("", RedirectView.as_view(pattern_name='dashboard'), name='root_redirect'),
+    
     path("login/", auth_views.LoginView.as_view(
         template_name="registration/login.html",
         authentication_form=EmailOrUsernameAuthenticationForm
     ), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    
+    # Logout CON redirección al dashboard
+    path("logout/", auth_views.LogoutView.as_view(next_page='dashboard'), name="logout"),
 
     path("register/", TemplateView.as_view(
         template_name="registration/register_disabled.html"
     ), name="register"),
     path("", include("tracker.urls")),
-    
 ]
-# ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG and getattr(settings, "MEDIA_PROVIDER", "filesystem") == "filesystem":
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

@@ -1,0 +1,390 @@
+<div class="offcanvas-content" style="background: #f8f9fa;">
+  
+  <!-- HEADER CON NOMBRE DEL EVENT -->
+  <div class="p-4 bg-white border-bottom">
+    <div class="d-flex align-items-start justify-content-between mb-2">
+      <div class="flex-grow-1">
+        <div class="d-flex align-items-center mb-2">
+          <i class="fas fa-calendar-alt text-primary me-2" style="font-size: 1.5rem;"></i>
+          <h4 class="mb-0 fw-bold">{{ event.name }}</h4>
+        </div>
+        <p class="text-muted mb-0" style="font-size: 0.9rem;">Event details overview</p>
+      </div>
+      
+      <!-- BOTONES DE ACCIÓN -->
+      {% if user.is_staff %}
+      <div class="d-flex gap-2">
+        <button class="btn btn-warning btn-sm" onclick="alert('Edit functionality coming soon')" title="Edit Event">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn btn-primary btn-sm" 
+            onclick="openAddSourceOffcanvas('/source/add/global/offcanvas/?event_id={{ event.id }}')" 
+            title="Add Source">
+        <i class="fas fa-plus"></i>
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="if(confirm('Archive this event?')) window.location.href='{% url 'toggle_event_active' pk=event.id %}'" title="Archive Event">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- INFORMACIÓN PRINCIPAL -->
+  <div class="p-4">
+    
+    <!-- GRID DE INFO CARDS -->
+    <div class="row g-3 mb-4">
+      
+      <!-- THREAT -->
+      <div class="col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-shield-alt text-primary me-2"></i>
+              <span class="text-muted small">Threat</span>
+            </div>
+            <h6 class="mb-0 fw-bold">{{ event.theme.name }}</h6>
+            <small class="text-muted">{{ event.theme.category.name }}</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- RISK RATING -->
+      <div class="col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+              <span class="text-muted small">Risk Rating</span>
+            </div>
+            <div>
+              {% if event.risk_rating == 'low' %}
+                <span class="badge bg-success px-3 py-2">Low</span>
+              {% elif event.risk_rating == 'moderate' %}
+                <span class="badge bg-warning text-dark px-3 py-2">Moderate</span>
+              {% elif event.risk_rating == 'high' %}
+                <span class="badge bg-danger px-3 py-2">High</span>
+              {% elif event.risk_rating == 'critical' %}
+                <span class="badge bg-dark px-3 py-2">Critical</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- DATE IDENTIFIED -->
+      <div class="col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-calendar-day text-info me-2"></i>
+              <span class="text-muted small">Date Identified</span>
+            </div>
+            <h6 class="mb-0 fw-bold">{{ event.date_identified|date:"M d, Y" }}</h6>
+          </div>
+        </div>
+      </div>
+      
+      <!-- PHASE/STATUS -->
+      <div class="col-6">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-tasks text-secondary me-2"></i>
+              <span class="text-muted small">Phase</span>
+            </div>
+            <h6 class="mb-0 fw-bold" style="font-size: 0.9rem;">{{ event.status }}</h6>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CONTROL IN PLACE -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-shield-alt text-success me-2"></i>
+            <span class="fw-semibold">Control in Place</span>
+          </div>
+          <div>
+            {% if event.control_in_place %}
+              <span class="badge bg-success px-3 py-2">Yes</span>
+            {% else %}
+              <span class="badge bg-secondary px-3 py-2">No</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IMPACTED BUSINESS LINES -->
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0 p-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-building me-2 text-primary"></i>Impacted Business Lines
+          </h6>
+        </div>
+        <div class="card-body p-3">
+          {% if impact_lobs_display %}
+            <div class="d-flex flex-wrap gap-2">
+              {% for lob in impact_lobs_display %}
+                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2" style="font-size: 0.85rem;">
+                  {{ lob }}
+                </span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <span class="text-muted">None specified</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RISK TAXONOMY -->
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0 p-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-sitemap me-2 text-danger"></i>Risk Taxonomy
+          </h6>
+        </div>
+        <div class="card-body p-3">
+          
+          <!-- LEVEL 1 -->
+          <div class="mb-3">
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-secondary me-2" style="font-size: 0.75rem;">Level 1</span>
+            </div>
+            <div style="max-height: 120px; overflow-y: auto;">
+              {% if risk_lv1_labels %}
+                <div class="d-flex flex-wrap gap-2">
+                  {% for label in risk_lv1_labels %}
+                    <span class="badge bg-primary px-3 py-2" style="font-size: 0.85rem;">{{ label }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted small">None</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- LEVEL 2 -->
+          <div class="mb-3">
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-secondary me-2" style="font-size: 0.75rem;">Level 2</span>
+            </div>
+            <div style="max-height: 120px; overflow-y: auto;">
+              {% if risk_lv2_labels %}
+                <div class="d-flex flex-wrap gap-2">
+                  {% for label in risk_lv2_labels %}
+                    <span class="badge bg-info px-3 py-2" style="font-size: 0.85rem;">{{ label }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted small">None</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- LEVEL 3 -->
+          <div>
+            <div class="d-flex align-items-center mb-2">
+              <span class="badge bg-secondary me-2" style="font-size: 0.75rem;">Level 3</span>
+            </div>
+            <div style="max-height: 120px; overflow-y: auto;">
+              {% if risk_lv3_labels %}
+                <div class="d-flex flex-wrap gap-2">
+                  {% for label in risk_lv3_labels %}
+                    <span class="badge bg-success px-3 py-2" style="font-size: 0.85rem;">{{ label }}</span>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="text-muted small">None</span>
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0 p-3">
+          <h6 class="mb-0 fw-semibold">
+            <i class="fas fa-align-left me-2 text-secondary"></i>Description
+          </h6>
+        </div>
+        <div class="card-body p-3">
+          <p class="mb-0" style="white-space: pre-wrap; font-size: 0.9rem;">{{ event.description|default:"No description provided." }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="d-grid gap-2 mb-3">
+      <a href="{% url 'view_event' event_id=event.id %}" class="btn btn-primary btn-lg">
+        <i class="fas fa-external-link-alt me-2"></i>View Full Details & Sources
+      </a>
+    </div>
+
+    <!-- FOOTER INFO -->
+    <div class="card border-0 shadow-sm bg-light">
+      <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-center text-muted small mb-2">
+          <span>
+            <i class="fas fa-user me-1"></i>Created by {{ event.created_by.username }}
+          </span>
+          <span>
+            <i class="fas fa-clock me-1"></i>{{ event.created_at|date:"M d, Y" }}
+          </span>
+        </div>
+        {% if bundle_count > 0 %}
+        <div class="text-muted small">
+          <i class="fas fa-file-alt me-1"></i>{{ bundle_count }} source{{ bundle_count|pluralize }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  
+</div>
+
+<style>
+  .offcanvas-content {
+    min-height: 100%;
+  }
+
+  .badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  }
+
+  /* Scrollbar styling */
+  .card-body::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .card-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .card-body::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+  }
+
+  .card-body::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+</style>
+
+<script>
+function openAddSourceOffcanvas(url) {
+  // Cerrar cualquier offcanvas existente
+  const existingOffcanvas = document.getElementById('addSourceFormOffcanvas');
+  if (existingOffcanvas) {
+    const bsOffcanvas = bootstrap.Offcanvas.getInstance(existingOffcanvas);
+    if (bsOffcanvas) bsOffcanvas.hide();
+    setTimeout(() => existingOffcanvas.remove(), 300);
+  }
+  
+  // Crear offcanvas dinámico con mejor estructura
+  const offcanvasHTML = `
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="addSourceFormOffcanvas" 
+         style="width: 700px;">
+      <div class="offcanvas-header bg-light border-bottom">
+        <div class="d-flex justify-content-between align-items-center w-100">
+          <h5 class="offcanvas-title fw-bold mb-0">
+            <i class="fas fa-plus-circle me-2 text-primary"></i>Add Source
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+      </div>
+      <div class="offcanvas-body p-0">
+        <div class="h-100 w-100 position-relative">
+          <iframe id="addSourceFrame" 
+                  src="${url}" 
+                  style="width: 100%; height: 100%; border: none;"
+                  onload="resizeSourceIframe(this)">
+          </iframe>
+          <div class="position-absolute top-0 end-0 p-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" 
+                    onclick="closeAddSourceOffcanvas()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Agregar al DOM
+  document.body.insertAdjacentHTML('beforeend', offcanvasHTML);
+  
+  // Mostrar offcanvas
+  const offcanvasElement = document.getElementById('addSourceFormOffcanvas');
+  const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
+  offcanvas.show();
+  
+  // Limpiar cuando se cierre
+  offcanvasElement.addEventListener('hidden.bs.offcanvas', function() {
+    setTimeout(() => {
+      if (document.body.contains(this)) {
+        this.remove();
+      }
+    }, 300);
+  });
+}
+
+function resizeSourceIframe(iframe) {
+  try {
+    // Esperar a que el contenido cargue
+    setTimeout(() => {
+      if (iframe.contentWindow && iframe.contentWindow.document.body) {
+        const height = iframe.contentWindow.document.body.scrollHeight;
+        iframe.style.height = Math.max(height, 500) + 'px';
+      }
+    }, 100);
+  } catch (e) {
+    console.log('Error ajustando iframe:', e);
+  }
+}
+
+function closeAddSourceOffcanvas() {
+  const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('addSourceFormOffcanvas'));
+  if (offcanvas) offcanvas.hide();
+}
+
+// Escuchar mensajes desde el iframe (para cerrar después de guardar)
+window.addEventListener('message', function(event) {
+  if (event.data === 'closeOffcanvas' || event.data === 'sourceSaved') {
+    closeAddSourceOffcanvas();
+    // Recargar la página después de un momento
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  }
+});
+</script>

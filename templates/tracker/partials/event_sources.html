@@ -1,0 +1,119 @@
+<table class="table table-sm align-middle mb-0">
+  <thead class="table-light">
+    <tr>
+      <th style="width: 22%">Source</th>
+      <th style="width: 12%">Date</th>
+      <th style="width: 18%">Attachments</th>
+      <th style="width: 16%">Impact</th>
+      <th style="width: 12%">Status</th>
+      <th class="text-end" style="width: 10%">Actions</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for source in event.sources.all %}
+
+    <tr>
+      <!-- Source -->
+      <td>
+        <a href="{% url 'source_detail' pk=source.id %}" class="fw-semibold text-dark text-decoration-none">
+          {{ source.name }}
+        </a>
+      </td>
+
+      <!-- Date -->
+      <td>{{ source.source_date|date:"Y-m-d" }}</td>
+
+      <!-- Attachments -->
+      <td>
+        {% if source.link_or_file %}
+          <i class="fas fa-link text-primary me-1" title="Main Link"></i>
+        {% endif %}
+
+        {% for l in source.extra_links_list %}
+          <i class="fas fa-external-link-alt text-secondary me-1" title="Extra Link"></i>
+        {% endfor %}
+
+        {% if source.file_upload %}
+          <i class="fas fa-file text-danger me-1" title="Main File"></i>
+        {% endif %}
+
+        {% for f in source.extra_files_list %}
+          <i class="fas fa-file text-dark me-1" title="Extra File"></i>
+        {% endfor %}
+      </td>
+
+      <!-- Impact -->
+      <td>
+        {% if source.potential_impact == "ESCALATING" %}
+          <span class="badge bg-danger"><i class="fas fa-arrow-up me-1"></i>Escalating</span>
+        {% elif source.potential_impact == "MAINTAINING" %}
+          <span class="badge bg-warning text-dark"><i class="fas fa-arrow-right me-1"></i>Maintaining</span>
+        {% elif source.potential_impact == "DECREASING" %}
+          <span class="badge bg-success"><i class="fas fa-arrow-down me-1"></i>Decreasing</span>
+        {% endif %}
+      </td>
+
+      <!-- Status -->
+      <td>
+        {% if source.is_archived %}
+          <span class="badge bg-secondary">Archived</span>
+        {% else %}
+          <span class="badge bg-success">Active</span>
+        {% endif %}
+      </td>
+
+      <!-- Actions -->
+      <td class="text-end">
+
+        <div class="dropdown">
+          <button class="btn btn-light btn-sm" data-bs-toggle="dropdown">
+            <i class="fas fa-ellipsis-vertical"></i>
+          </button>
+
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+
+            <li>
+              <a class="dropdown-item" href="{% url 'source_detail' pk=source.id %}">
+                <i class="fas fa-eye me-2"></i>View
+              </a>
+            </li>
+
+            <li>
+              <a class="dropdown-item" href="{% url 'edit_source' pk=source.id %}">
+                <i class="fas fa-pen me-2"></i>Edit
+              </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
+            {% if source.is_archived %}
+              <li>
+                <button class="dropdown-item text-success"
+                        data-bs-toggle="modal"
+                        data-bs-target="#restoreSourceModal{{ source.id }}">
+                  <i class="fas fa-rotate-left me-2"></i>Restore
+                </button>
+              </li>
+            {% else %}
+              <li>
+                <button class="dropdown-item text-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#archiveSourceModal{{ source.id }}">
+                  <i class="fas fa-box-archive me-2"></i>Archive
+                </button>
+              </li>
+            {% endif %}
+
+          </ul>
+        </div>
+
+        {% include "tracker/partials/source_modals.html" with source=source %}
+
+      </td>
+
+    </tr>
+
+    {% endfor %}
+  </tbody>
+</table>

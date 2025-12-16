@@ -1,0 +1,115 @@
+{% load widget_tweaks %}
+
+<form method="post"
+      id="addThemeForm"
+      action="{% url 'add_theme_offcanvas' %}"
+      novalidate
+      class="p-4">
+
+    {% csrf_token %}
+
+    <!-- ================= BASIC INFO ================= -->
+    <h6 class="fw-bold mb-3 border-bottom pb-2">
+        <i class="fas fa-info-circle me-2"></i>Basic Information
+    </h6>
+
+    <div class="mb-3">
+        <label class="form-label fw-bold">Category *</label>
+        {{ form.category|add_class:"form-select" }}
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label fw-bold">Name *</label>
+        {{ form.name|add_class:"form-control"|attr:"maxlength:30"|attr:"placeholder:Enter threat name" }}
+    </div>
+
+    <!-- ================= CLASSIFICATION ================= -->
+    <h6 class="fw-bold mb-3 border-bottom pb-2">
+        <i class="fas fa-shield-alt me-2"></i>Classification
+    </h6>
+
+    <!-- 🔥 REAL FIELD -->
+    <input type="hidden" name="risk_rating" id="id_risk_rating">
+
+    <label class="form-label fw-bold mb-3">Risk Rating *</label>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6">
+            <div class="risk-card" data-risk="low">
+                <i class="fas fa-check-circle text-success mb-2"></i>
+                <div>Low</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="risk-card" data-risk="moderate">
+                <i class="fas fa-exclamation-circle text-warning mb-2"></i>
+                <div>Moderate</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="risk-card" data-risk="high">
+                <i class="fas fa-exclamation-triangle text-orange mb-2"></i>
+                <div>High</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="risk-card" data-risk="critical">
+                <i class="fas fa-skull-crossbones text-danger mb-2"></i>
+                <div>Critical</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label fw-bold">Onset timeline *</label>
+        {{ form.onset_timeline|add_class:"form-select" }}
+    </div>
+
+    <!-- ================= ACTIONS ================= -->
+    <div class="d-flex justify-content-between border-top pt-3">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                data-bs-dismiss="offcanvas">
+            Cancel
+        </button>
+        <button type="submit"
+                class="btn btn-primary">
+            Save Threat
+        </button>
+    </div>
+</form>
+
+<style>
+.risk-card {
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s ease;
+    background: #fff;
+}
+.risk-card:hover {
+    border-color: #adb5bd;
+}
+.risk-card.selected {
+    border-color: #0d6efd;
+    background: #f8f9fa;
+}
+.text-orange {
+    color: #fd7e14;
+}
+</style>
+
+<script>
+document.addEventListener('click', function (e) {
+    const card = e.target.closest('.risk-card');
+    if (!card) return;
+
+    document.querySelectorAll('.risk-card')
+        .forEach(c => c.classList.remove('selected'));
+
+    card.classList.add('selected');
+    document.getElementById('id_risk_rating').value = card.dataset.risk;
+});
+</script>
