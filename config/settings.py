@@ -131,7 +131,7 @@ TEMPLATES = [
 # Uses Postgres if DATABASE_URL is set; falls back to local SQLite
 # 
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 #DATABASES = {
 #    'default': {
 #       'ENGINE': 'mssql',
