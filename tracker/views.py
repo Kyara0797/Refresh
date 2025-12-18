@@ -25,7 +25,6 @@ from django.conf import settings
 from django.http import JsonResponse, HttpResponseRedirect, Http404
 from collections import OrderedDict
 
-
 from .models import (
     Category, Theme, Event, Source, UserAccessLog, SourceFileVersion,
     LINE_OF_BUSINESS_CHOICES,
@@ -2035,94 +2034,29 @@ def add_event_offcanvas(request):
 # ===========================
 #   EDIT EVENT — OFFCANVAS
 # ===========================
+
+@login_required
 def edit_event_offcanvas(request, pk):
-
     event = get_object_or_404(Event, pk=pk)
-
-    if request.method == "POST":
-        # El POST lo manejará tu vista normal edit_event
-        pass
-
     form = EventForm(instance=event)
 
-    return render(request, "tracker/offcanvas/event_form_offcanvas.html", {
-        "creating": False,
-        "form": form,
-        "event": event,
-        "theme": event.theme,
-    })
-    
-    
-
-    """
-    Procesar el formulario de Add Source desde offcanvas
-    """
-    if request.method != "POST":
-        return JsonResponse({"success": False, "message": "Invalid method"})
-    
-    try:
-        # Aquí va la lógica de tu función add_source_global_offcanvas
-        # que ya tienes en views.py, adaptada para retornar JSON
-        
-        # Crear el source usando la misma lógica que tu función original
-        # ... (tu lógica existente para crear sources)
-        
-        # Ejemplo simplificado:
-        event_id = request.POST.get('event')
-        name = request.POST.get('name')
-        
-        if not event_id:
-            return JsonResponse({
-                "success": False,
-                "errors": {"event": ["Please select an event"]}
-            })
-        
-        if not name or len(name) < 3:
-            return JsonResponse({
-                "success": False,
-                "errors": {"name": ["Name must be at least 3 characters"]}
-            })
-        
-        # Crear el source (simplificado - usa tu lógica real)
-        source = Source.objects.create(
-            event_id=event_id,
-            name=name,
-            source_date=request.POST.get('source_date'),
-            summary=request.POST.get('summary'),
-            # ... otros campos
-        )
-        
-        return JsonResponse({
-            "success": True,
-            "message": "Source created successfully!",
-            "redirect_url": f"/event/{source.event_id}/"  # Redirigir al evento
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            "success": False,
-            "message": str(e)
-        })
-
-    upload_batch = str(uuid.uuid4())
-
-    html = render(
-        request,
-        "add_source_offcanvas.html",
+    html = render_to_string(
+        "tracker/offcanvas/add_event_offcanvas.html",
         {
-            "creating": True,
-            "event": None,
-            "form": SourceForm(),
-            "cancel_url": reverse_lazy("dashboard"),
-            "existing_summaries_json": "[]",
-            "upload_batch": upload_batch,
-            "staged_main": None,
-            "staged_extras": [],
-        }
+            "form": form,
+            "creating": False,
+            "event": event,
+        },
+        request=request
     )
 
-    return html
+    return JsonResponse({
+        "success": True,
+        "html": html,
+        "title": "Edit Event"
+    })
 
+    
 
 
 def theme_list_offcanvas(request):
@@ -2434,7 +2368,7 @@ def event_detail_offcanvas(request, pk):  # 🔥 CAMBIO: event_id → pk
     return JsonResponse({
         'success': True,
         'html': html,
-        'title': f'Event: {event.name}'  # ✅ Texto plano sin HTML
+        'title': 'Event Details'  
     })
     
 # ===========================

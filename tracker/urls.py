@@ -87,4 +87,11 @@ urlpatterns = [
     # URLs para Eventos en offcanvas (agrega estas)
     path('event/edit/offcanvas/<int:pk>/', views.edit_event_offcanvas, name='edit_event_offcanvas'),
     path('event/add/offcanvas/', views.add_event_offcanvas, name='add_event_offcanvas'),
+    
+    path(
+        "event/<int:pk>/edit/offcanvas/",
+        views.edit_event_offcanvas,
+        name="edit_event_offcanvas"
+    ),
+
 ]

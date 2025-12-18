@@ -70,12 +70,15 @@
                 Risk Rating <span class="text-danger">*</span>
               </label>
 
-              <select class="form-select hidden" id="risk_rating" name="risk_rating" required style="display: none;">
+              <select class="form-select hidden"
+                      id="risk_rating"
+                      name="risk_rating"
+                      required
+                      style="display:none;">
                 <option value="">Select risk rating</option>
-                <option value="low">Low</option>
-                <option value="moderate">Moderate</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                {% for value, label in form.risk_rating.field.choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
               </select>
 
               <div id="risk-tiles" class="risk-rating-container mt-2" aria-describedby="risk-error">
@@ -849,120 +852,122 @@
       return valid;
     }
 
-   // =============================================
-// FORM SUBMIT HANDLER
-// =============================================
-form.addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  const nameOk = validateName();
-  const dateOk = validateDateNotFuture();
-  const taxOk = validateTaxonomy();
-  const riskOk = validateRisk();
+    // =============================================
+    // FORM SUBMIT HANDLER
+    // =============================================
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
 
-  const isValid = form.checkValidity() && nameOk && dateOk && taxOk && riskOk;
+      const nameOk = validateName();
+      const dateOk = validateDateNotFuture();
+      const taxOk = validateTaxonomy();
+      const riskOk = validateRisk();
 
-  if (!isValid) {
-    form.classList.add('was-validated');
-    console.log('❌ Form validation failed');
-    return false;
-  }
+      const isValid = form.checkValidity() && nameOk && dateOk && taxOk && riskOk;
 
-  // 🔥 CREAR FormData manualmente para asegurar formato correcto
-  const formData = new FormData();
-  
-  // Agregar campos simples
-  const theme = form.querySelector('[name="theme"]');
-  if (theme) formData.append('theme', theme.value);
-  
-  const name = form.querySelector('[name="name"]');
-  if (name) formData.append('name', name.value);
-  
-  const dateIdentified = form.querySelector('[name="date_identified"]');
-  if (dateIdentified) formData.append('date_identified', dateIdentified.value);
-  
-  // 🔥 IMPORTANTE: risk_rating como string único
-  const riskRating = form.querySelector('[name="risk_rating"]');
-  if (riskRating && riskRating.value) {
-    formData.append('risk_rating', riskRating.value);
-  }
-  
-  const status = form.querySelector('[name="status"]');
-  if (status) formData.append('status', status.value);
-  
-  const controlInPlace = form.querySelector('[name="control_in_place"]');
-  if (controlInPlace && controlInPlace.checked) {
-    formData.append('control_in_place', 'on');
-  }
-  
-  const description = form.querySelector('[name="description"]');
-  if (description) formData.append('description', description.value);
-  
-  // 🔥 Agregar arrays (impacted_lines, taxonomía)
-  const impactedLines = form.querySelectorAll('[name="impacted_lines"]:checked');
-  impactedLines.forEach(cb => {
-    formData.append('impacted_lines', cb.value);
-  });
-  
-  const lv1 = form.querySelectorAll('[name="risk_taxonomy_lv1"]:checked');
-  lv1.forEach(cb => {
-    formData.append('risk_taxonomy_lv1', cb.value);
-  });
-  
-  const lv2 = form.querySelectorAll('[name="risk_taxonomy_lv2"]:checked');
-  lv2.forEach(cb => {
-    formData.append('risk_taxonomy_lv2', cb.value);
-  });
-  
-  const lv3 = form.querySelectorAll('[name="risk_taxonomy_lv3"]:checked');
-  lv3.forEach(cb => {
-    formData.append('risk_taxonomy_lv3', cb.value);
-  });
-  
-  // CSRF Token
-  const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]');
-  if (csrfToken) formData.append('csrfmiddlewaretoken', csrfToken.value);
-
-  console.log(' Submitting form data...');
-
-  fetch(form.action, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-Requested-With': 'XMLHttpRequest'
-    }
-  })
-  .then(r => r.json())
-  .then(resp => {
-    if (resp.success) {
-      console.log('✅ Event created successfully');
-      
-      const offcanvasElement = document.getElementById('globalOffcanvas');
-      if (offcanvasElement) {
-        const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
-        if (offcanvas) offcanvas.hide();
+      if (!isValid) {
+        form.classList.add('was-validated');
+        console.log('❌ Form validation failed');
+        return false;
       }
-      
-      if (resp.redirect_url) {
-        window.location.href = resp.redirect_url;
-      }
-    } else {
-      console.error(' Form submission failed:', resp.errors);
-      
-      // Mostrar errores al usuario
-      let errorMsg = 'Please correct the following errors:\n';
-      for (const [field, errors] of Object.entries(resp.errors)) {
-        errorMsg += `\n${field}: ${errors.join(', ')}`;
-      }
-      alert(errorMsg);
-    }
-  })
-  .catch(err => {
-    console.error(' Submit error:', err);
-    alert('Error saving event. Please try again.');
-  });
-});
 
+      const formData = new FormData();
+
+      const fields = [
+        'theme',
+        'name',
+        'date_identified',
+        'risk_rating',
+        'status',
+        'description'
+      ];
+
+      fields.forEach(name => {
+        const el = form.querySelector(`[name="${name}"]`);
+        if (el && el.value) formData.append(name, el.value);
+      });
+
+      const controlInPlace = form.querySelector('[name="control_in_place"]');
+      if (controlInPlace && controlInPlace.checked) {
+        formData.append('control_in_place', 'on');
+      }
+
+      form.querySelectorAll('[name="impacted_lines"]:checked')
+        .forEach(cb => formData.append('impacted_lines', cb.value));
+
+      form.querySelectorAll('[name="risk_taxonomy_lv1"]:checked')
+        .forEach(cb => formData.append('risk_taxonomy_lv1', cb.value));
+
+      form.querySelectorAll('[name="risk_taxonomy_lv2"]:checked')
+        .forEach(cb => formData.append('risk_taxonomy_lv2', cb.value));
+
+      form.querySelectorAll('[name="risk_taxonomy_lv3"]:checked')
+        .forEach(cb => formData.append('risk_taxonomy_lv3', cb.value));
+
+      const csrf = form.querySelector('[name="csrfmiddlewaretoken"]');
+      if (csrf) formData.append('csrfmiddlewaretoken', csrf.value);
+
+      console.log('📤 Submitting form data...');
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(r => r.json())
+      .then(resp => {
+        if (!resp.success || !resp.event_id) {
+          console.error('❌ Form submission failed:', resp.errors);
+          alert('Error saving event. Please review the form.');
+          return;
+        }
+
+        console.log('✅ Event created successfully:', resp.event_id);
+
+        const detailUrl = `/event/${resp.event_id}/offcanvas/`;
+        console.log('📥 Loading event detail:', detailUrl);
+
+        fetch(detailUrl, {
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(r => r.json())
+        .then(detailResp => {
+          if (!detailResp.success) {
+            console.error('❌ Failed loading event detail', detailResp);
+            return;
+          }
+
+          const offcanvas = document.getElementById('globalOffcanvas');
+          const body = offcanvas?.querySelector('.offcanvas-body');
+          const title = offcanvas?.querySelector('.offcanvas-title');
+
+          if (body) {
+            body.innerHTML = detailResp.html;
+          }
+
+          if (title && detailResp.title) {
+            title.textContent = detailResp.title;
+          }
+
+          console.log('✅ Event detail rendered correctly');
+        })
+        .catch(err => {
+          console.error('❌ Error loading event detail:', err);
+        });
+
+      })
+      .catch(err => {
+        console.error('❌ Submit error:', err);
+        alert('Error saving event. Please try again.');
+      });
+    });
+
+
+   
     // =============================================
     // EVENT DELEGATION FOR TAXONOMY
     // =============================================

@@ -1076,9 +1076,7 @@
                 }, 50);
             }
 
-            if (data.title) {
-                offcanvasTitle.textContent = data.title;
-            }
+            
 
             console.log('✅ Offcanvas initialization complete');
         })
@@ -1345,8 +1343,12 @@
     };
 
     window.openEventDetailOffcanvas = function(eventId) {
-        console.log("Opening event detail for ID:", eventId);
-        loadOffcanvas(`/event/${eventId}/offcanvas/`, '<i class="fas fa-calendar-alt me-2"></i>Event Details');
+      console.log("Opening event detail for ID:", eventId);
+
+      loadOffcanvas(
+          `/event/${eventId}/offcanvas/`,
+          '<i class="fas fa-calendar-alt me-2">Event Detail</i>'
+      );
     };
 
     // =============================================
@@ -1571,6 +1573,15 @@
         }
     });
 
+    window.openEditEventOffcanvas = function(eventId) {
+        console.log("✏️ Opening Edit Event offcanvas for:", eventId);
+
+        loadOffcanvas(
+            `/event/${eventId}/edit/offcanvas/`,
+            '<i class="fas fa-pen me-2"></i>Edit Event'
+        );
+    };
+
     // =============================================
     // AÑADIR AL OBJETO WINDOW (global)
     // =============================================
@@ -1585,6 +1596,7 @@
     window.closeAllModals = closeAllModals;
     window.loadOffcanvas = loadOffcanvas;
     window.openAddSourceGlobalOffcanvas = openAddSourceGlobalOffcanvas;
+    window.openEditEventOffcanvas = openEditEventOffcanvas;
   </script>
 
   {% block scripts %}{% endblock %}
